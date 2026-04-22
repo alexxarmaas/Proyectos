@@ -1,313 +1,285 @@
-const fs = require("fs");
-const path = require("path");
-const sqlite3 = require("sqlite3").verbose();
+const path = require('path');
+const sqlite3 = require('sqlite3').verbose();
 
-const dataDir = path.join(__dirname, "data");
-const dbPath = path.join(dataDir, "nutriapp.sqlite");
-
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-}
-
-const db = new sqlite3.Database(dbPath);
-
-db.serialize(() => {
-  db.run("PRAGMA foreign_keys = ON");
-});
-
-function run(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function onRun(err) {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve({ id: this.lastID, changes: this.changes });
-    });
-  });
-}
-
-function get(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve(row);
-    });
-  });
-}
-
-function all(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve(rows);
-    });
-  });
-}
-
-async function initDb() {
-  await run(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      email TEXT NOT NULL UNIQUE,
-      password TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS sessions (
-      token TEXT PRIMARY KEY,
-      user_id INTEGER NOT NULL,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS patients (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      email TEXT,
-      phone TEXT,
-      main_goal TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'inactive')),
-      general_notes TEXT DEFAULT '',
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS patient_notes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      patient_id INTEGER NOT NULL,
-      content TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (patient_id) REFERENCES patients (id) ON DELETE CASCADE
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS consultations (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      patient_id INTEGER NOT NULL,
-      date TEXT NOT NULL,
-      hour TEXT NOT NULL,
-      weight REAL,
-      observations TEXT,
-      habits TEXT,
-      recommendations TEXT,
-      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'completed', 'cancelled')),
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (patient_id) REFERENCES patients (id) ON DELETE CASCADE
-    )
-  `);
-
-  await run(`
-    CREATE TABLE IF NOT EXISTS consultation_followups (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      consultation_id INTEGER NOT NULL,
-      content TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (consultation_id) REFERENCES consultations (id) ON DELETE CASCADE
-    )
-  `);
-
-  await seedDb();
-}
-
-async function seedDb() {
-  const existingUser = await get("SELECT id FROM users LIMIT 1");
-  if (existingUser) {
+const dbPath = path.resolve(__dirname, 'database.sqlite');
+const db = new sqlite3.Database(dbPath, (error) => {
+  if (error) {
+    console.error('Error opening SQLite database:', error.message);
     return;
   }
 
-  await run(
-    "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
-    ["Laura Varela", "laura@nutriapp.demo", "demo1234"]
-  );
+  console.log('Connected to NutriApp SQLite database.');
+  initializeDatabase();
+});
 
-  const patients = [
-    {
-      name: "Marta González",
-      email: "marta.gonzalez@gmail.com",
-      phone: "+34 611 23 45 67",
-      mainGoal: "Bajar 6 kg de forma sostenible",
-      status: "active",
-      generalNotes:
-        "Trabaja en oficina, poco tiempo para cocinar entre semana. Buena adherencia cuando planifica el domingo."
-    },
-    {
-      name: "Carlos Ruiz",
-      email: "carlos.ruiz@hotmail.com",
-      phone: "+34 622 88 10 44",
-      mainGoal: "Mejorar composición corporal y energía",
-      status: "active",
-      generalNotes:
-        "Entrena fuerza 4 veces por semana. Suele saltarse la merienda y llega con mucha hambre a la cena."
-    },
-    {
-      name: "Elena Navarro",
-      email: "elena.navarro@yahoo.es",
-      phone: "+34 645 77 21 30",
-      mainGoal: "Reducir molestias digestivas y regular horarios",
-      status: "inactive",
-      generalNotes:
-        "Pausó seguimiento por viaje de trabajo. Quiere retomar en dos meses."
-    },
-    {
-      name: "Javier Soto",
-      email: "javier.soto@gmail.com",
-      phone: "+34 654 89 00 19",
-      mainGoal: "Optimizar nutrición para media maratón",
-      status: "active",
-      generalNotes:
-        "Muy disciplinado. Necesita afinar estrategia de hidratación y pre-entreno."
-    }
-  ];
+function initializeDatabase() {
+  db.serialize(() => {
+    db.run('PRAGMA foreign_keys = ON');
 
-  for (const patient of patients) {
-    await run(
-      `
-      INSERT INTO patients (name, email, phone, main_goal, status, general_notes, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, datetime('now', '-20 day'), datetime('now'))
-    `,
-      [
-        patient.name,
-        patient.email,
-        patient.phone,
-        patient.mainGoal,
-        patient.status,
-        patient.generalNotes
-      ]
-    );
-  }
+    db.run(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE,
+        password TEXT NOT NULL,
+        role TEXT DEFAULT 'nutritionist',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-  const marta = await get("SELECT id FROM patients WHERE name = ?", ["Marta González"]);
-  const carlos = await get("SELECT id FROM patients WHERE name = ?", ["Carlos Ruiz"]);
-  const elena = await get("SELECT id FROM patients WHERE name = ?", ["Elena Navarro"]);
-  const javier = await get("SELECT id FROM patients WHERE name = ?", ["Javier Soto"]);
+    db.run(`
+      CREATE TABLE IF NOT EXISTS patients (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT,
+        phone TEXT,
+        goal TEXT,
+        status TEXT DEFAULT 'active',
+        general_notes TEXT DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-  const notes = [
-    [marta.id, "Le funciona desayunar yogur griego con fruta y avena."],
-    [marta.id, "Revisión de cena: reducir pedidos a domicilio a 1 por semana."],
-    [carlos.id, "Aumentar proteína en desayuno para mejorar saciedad."],
-    [javier.id, "Probar gel de hidratos en tiradas > 60 min."],
-    [elena.id, "Registrar síntomas digestivos con escala de 1 a 5."]
-  ];
+    db.run(`
+      CREATE TABLE IF NOT EXISTS patient_notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        patient_id INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (patient_id) REFERENCES patients (id) ON DELETE CASCADE
+      )
+    `);
 
-  for (const [patientId, content] of notes) {
-    await run(
-      "INSERT INTO patient_notes (patient_id, content, created_at) VALUES (?, ?, datetime('now', '-3 day'))",
-      [patientId, content]
-    );
-  }
+    db.run(`
+      CREATE TABLE IF NOT EXISTS consultations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        patient_id INTEGER NOT NULL,
+        date TEXT NOT NULL,
+        time TEXT NOT NULL,
+        weight REAL,
+        observations TEXT DEFAULT '',
+        habits TEXT DEFAULT '',
+        recommendations TEXT DEFAULT '',
+        status TEXT DEFAULT 'pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (patient_id) REFERENCES patients (id) ON DELETE CASCADE
+      )
+    `);
 
-  const consultations = [
-    {
-      patientId: marta.id,
-      date: "2026-04-16",
-      hour: "10:30",
-      weight: 72.4,
-      observations: "Refiere menos ansiedad nocturna.",
-      habits: "Cumplió hidratación 5/7 días.",
-      recommendations: "Añadir snack de media tarde rico en proteína.",
-      status: "completed"
-    },
-    {
-      patientId: marta.id,
-      date: "2026-04-24",
-      hour: "10:00",
-      weight: 71.9,
-      observations: "",
-      habits: "Pendiente de revisión semanal.",
-      recommendations: "Revisar menú batch cooking.",
-      status: "pending"
-    },
-    {
-      patientId: carlos.id,
-      date: "2026-04-22",
-      hour: "18:00",
-      weight: 84.1,
-      observations: "Mejor energía en entrenos matutinos.",
-      habits: "Cumplió 80% plan semanal.",
-      recommendations: "Mantener distribución de comidas cada 4 horas.",
-      status: "pending"
-    },
-    {
-      patientId: javier.id,
-      date: "2026-04-20",
-      hour: "08:30",
-      weight: 69.7,
-      observations: "Buena tolerancia digestiva antes de correr.",
-      habits: "Excelente adherencia.",
-      recommendations: "Ajustar sal en días de calor.",
-      status: "completed"
-    },
-    {
-      patientId: elena.id,
-      date: "2026-04-10",
-      hour: "16:00",
-      weight: 61.2,
-      observations: "Se pospone seguimiento por viaje.",
-      habits: "Sin registro completo.",
-      recommendations: "Retomar diario de comidas al volver.",
-      status: "cancelled"
-    }
-  ];
-
-  for (const consult of consultations) {
-    await run(
-      `
-      INSERT INTO consultations
-      (patient_id, date, hour, weight, observations, habits, recommendations, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '-10 day'), datetime('now'))
-    `,
-      [
-        consult.patientId,
-        consult.date,
-        consult.hour,
-        consult.weight,
-        consult.observations,
-        consult.habits,
-        consult.recommendations,
-        consult.status
-      ]
-    );
-  }
-
-  const martaConsult = await get(
-    "SELECT id FROM consultations WHERE patient_id = ? ORDER BY id DESC LIMIT 1",
-    [marta.id]
-  );
-  const javierConsult = await get(
-    "SELECT id FROM consultations WHERE patient_id = ? ORDER BY id DESC LIMIT 1",
-    [javier.id]
-  );
-
-  await run(
-    "INSERT INTO consultation_followups (consultation_id, content, created_at) VALUES (?, ?, datetime('now', '-1 day'))",
-    [martaConsult.id, "Aumentó pasos diarios de 5.000 a 7.500."]
-  );
-  await run(
-    "INSERT INTO consultation_followups (consultation_id, content, created_at) VALUES (?, ?, datetime('now', '-1 day'))",
-    [javierConsult.id, "Reporta mejor recuperación con cena post-entreno."]
-  );
+    seedDemoData();
+  });
 }
 
-module.exports = {
-  db,
-  run,
-  get,
-  all,
-  initDb
-};
+function seedDemoData() {
+  db.get('SELECT COUNT(*) AS count FROM users', (userError, userRow) => {
+    if (userError) {
+      console.error('Error checking users seed:', userError.message);
+      return;
+    }
+
+    if (userRow.count === 0) {
+      db.run(
+        `INSERT INTO users (name, email, password) VALUES (?, ?, ?)`,
+        ['Laura Martín', 'nutri@demo.com', 'admin123']
+      );
+    }
+  });
+
+  db.get('SELECT COUNT(*) AS count FROM patients', (patientError, patientRow) => {
+    if (patientError) {
+      console.error('Error checking patients seed:', patientError.message);
+      return;
+    }
+
+    if (patientRow.count > 0) {
+      return;
+    }
+
+    console.log('Seeding NutriApp demo data...');
+
+    const patients = [
+      [
+        'Marta Romero',
+        'marta.romero@gmail.com',
+        '+34 611 203 908',
+        'Perder grasa sin hacer una dieta restrictiva',
+        'active',
+        'Trabaja en oficina. Tolera bien la planificacion semanal y responde mejor a objetivos pequenos.'
+      ],
+      [
+        'David Serrano',
+        'd.serrano@correo.es',
+        '+34 622 519 441',
+        'Mejorar energia y adherencia a una alimentacion equilibrada',
+        'active',
+        'Entrena 3 veces por semana. Le cuesta desayunar y suele picar por la tarde.'
+      ],
+      [
+        'Lucía Navarro',
+        'lucia.navarro@mail.com',
+        '+34 699 784 123',
+        'Acompañamiento en recomposicion corporal',
+        'active',
+        'Muy constante. Valora mucho el seguimiento visual y las pautas simples.'
+      ],
+      [
+        'Javier Ortega',
+        'javier.ortega@empresa.com',
+        '+34 677 888 202',
+        'Reordenar horarios y reducir cenas impulsivas',
+        'inactive',
+        'Ha pausado el seguimiento por viaje de trabajo hasta el mes que viene.'
+      ]
+    ];
+
+    const notesByPatient = [
+      [
+        'Prefiere menús cerrados de lunes a viernes y mas flexibilidad el fin de semana.',
+        'Le motiva ver cambios en cintura y energia, no solo en peso.'
+      ],
+      [
+        'Suele llegar a la consulta con dudas concretas sobre cenas rapidas.',
+        'Quiere opciones practicas para comer fuera de casa sin sentirse fuera del plan.'
+      ],
+      [
+        'Acepta muy bien medir progreso con fotos y registro de sensaciones.',
+        'Ya prepara batch cooking dos dias por semana.'
+      ],
+      [
+        'Seguimiento temporalmente en pausa.'
+      ]
+    ];
+
+    const consultationSeedBuilder = (patientIds) => {
+      const today = new Date();
+      const offsetDate = (days) => {
+        const date = new Date(today);
+        date.setDate(date.getDate() + days);
+        return date.toISOString().split('T')[0];
+      };
+
+      return [
+        [
+          patientIds[0],
+          offsetDate(-21),
+          '10:00',
+          78.4,
+          'Refiere mejor digestion y menos hambre nocturna.',
+          'Ha mantenido 3 comidas principales y 1 merienda la mayor parte de la semana.',
+          'Subir proteina en desayuno y repetir estructura de cenas que mejor funcionaron.',
+          'completed'
+        ],
+        [
+          patientIds[0],
+          offsetDate(2),
+          '09:30',
+          77.6,
+          'Revision quincenal enfocada en adherencia.',
+          'Ha empezado a caminar despues de comer 4 dias por semana.',
+          'Mantener pasos diarios y preparar snacks para la oficina.',
+          'pending'
+        ],
+        [
+          patientIds[1],
+          offsetDate(-7),
+          '18:00',
+          91.2,
+          'Mejor descanso y menos cansancio a media mañana.',
+          'Sigue saltandose desayuno dos dias a la semana.',
+          'Introducir desayuno liquido facil y definir dos cenas comodin.',
+          'completed'
+        ],
+        [
+          patientIds[1],
+          offsetDate(4),
+          '17:30',
+          90.8,
+          'Seguimiento de rutina semanal.',
+          'Mas regularidad con la compra del domingo.',
+          'Simplificar lista de compra y revisar saciedad de media tarde.',
+          'pending'
+        ],
+        [
+          patientIds[2],
+          offsetDate(-14),
+          '12:15',
+          64.1,
+          'Buena respuesta al aumento de proteina y entrenamiento de fuerza.',
+          'Cumplio objetivo de 2 preparaciones base por semana.',
+          'Mantener distribucion proteica y valorar ajustes segun sensaciones.',
+          'completed'
+        ],
+        [
+          patientIds[2],
+          offsetDate(1),
+          '12:45',
+          63.9,
+          'Consulta de seguimiento con control de sensaciones.',
+          'Mayor apetito los dias de entrenamiento de tren inferior.',
+          'Añadir snack pre entrenamiento y monitorizar recuperacion.',
+          'pending'
+        ],
+        [
+          patientIds[3],
+          offsetDate(-5),
+          '16:00',
+          84.5,
+          'Consulta reprogramada por viaje.',
+          'Pocas comidas estructuradas por cambio de horario.',
+          'Retomar rutina al volver y reagendar primera semana de mayo.',
+          'cancelled'
+        ]
+      ];
+    };
+
+    const insertPatient = db.prepare(`
+      INSERT INTO patients (name, email, phone, goal, status, general_notes)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    const insertedPatientIds = [];
+    let insertedCount = 0;
+
+    patients.forEach((patient) => {
+      insertPatient.run(patient, function onInsert(error) {
+        if (error) {
+          console.error('Error seeding patient:', error.message);
+          return;
+        }
+
+        insertedPatientIds.push(this.lastID);
+        insertedCount += 1;
+
+        if (insertedCount === patients.length) {
+          insertPatient.finalize(() => {
+            const insertNote = db.prepare(`
+              INSERT INTO patient_notes (patient_id, content) VALUES (?, ?)
+            `);
+
+            notesByPatient.forEach((group, index) => {
+              group.forEach((note) => insertNote.run(insertedPatientIds[index], note));
+            });
+
+            insertNote.finalize(() => {
+              const insertConsultation = db.prepare(`
+                INSERT INTO consultations (
+                  patient_id, date, time, weight, observations, habits, recommendations, status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+              `);
+
+              consultationSeedBuilder(insertedPatientIds).forEach((consultation) => {
+                insertConsultation.run(consultation);
+              });
+
+              insertConsultation.finalize();
+            });
+          });
+        }
+      });
+    });
+  });
+}
+
+module.exports = db;

@@ -1,193 +1,156 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import Modal from "../components/Modal";
-import PatientForm from "../components/PatientForm";
-import { useAuth } from "../context/AuthContext";
-import { patientsApi } from "../services/api";
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import api from '../lib/api';
+import PatientFormModal from '../components/PatientFormModal';
+import EmptyState from '../components/EmptyState';
 
-function Patients() {
-  const { token } = useAuth();
+export default function Patients() {
   const [patients, setPatients] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [query, setQuery] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+
+  const fetchPatients = () => {
+    api.get('/patients').then((response) => setPatients(response.data));
+  };
 
   useEffect(() => {
-    loadPatients();
-  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+    fetchPatients();
+  }, []);
 
-  async function loadPatients() {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await patientsApi.list(token, {
-        status: statusFilter,
-        search
-      });
-      setPatients(data);
-    } catch (loadError) {
-      setError(loadError.message);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const filteredPatients = useMemo(() => {
+    const search = query.toLowerCase();
+    return patients.filter((patient) => {
+      return (
+        patient.name.toLowerCase().includes(search) ||
+        (patient.goal || '').toLowerCase().includes(search) ||
+        (patient.email || '').toLowerCase().includes(search)
+      );
+    });
+  }, [patients, query]);
 
-  const sortedPatients = useMemo(
-    () => [...patients].sort((a, b) => a.name.localeCompare(b.name)),
-    [patients]
-  );
-
-  async function handleCreate(payload) {
-    setSubmitting(true);
-    try {
-      await patientsApi.create(token, payload);
-      setShowCreateModal(false);
-      await loadPatients();
-    } catch (submitError) {
-      setError(submitError.message);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handleUpdate(payload) {
-    setSubmitting(true);
-    try {
-      await patientsApi.update(token, editingPatient.id, payload);
-      setEditingPatient(null);
-      await loadPatients();
-    } catch (submitError) {
-      setError(submitError.message);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handleDelete(patientId) {
-    const shouldDelete = window.confirm("Esta accion eliminara el paciente y su historial. Continuar?");
-    if (!shouldDelete) {
-      return;
+  const handleSave = async (payload) => {
+    if (editingPatient) {
+      await api.put(`/patients/${editingPatient.id}`, payload);
+    } else {
+      await api.post('/patients', payload);
     }
 
-    try {
-      await patientsApi.remove(token, patientId);
-      await loadPatients();
-    } catch (deleteError) {
-      setError(deleteError.message);
-    }
-  }
+    setModalOpen(false);
+    setEditingPatient(null);
+    fetchPatients();
+  };
+
+  const handleDelete = async (patientId) => {
+    const confirmed = window.confirm('¿Quieres eliminar este paciente y su historial?');
+    if (!confirmed) return;
+
+    await api.delete(`/patients/${patientId}`);
+    fetchPatients();
+  };
 
   return (
-    <section className="page-shell">
-      <header className="page-header">
+    <div className="page-stack">
+      <section className="hero-header">
         <div>
-          <p className="eyebrow">Gestion centralizada</p>
-          <h2>Pacientes</h2>
-          <p className="muted">Ficha unica para cada paciente y acceso rapido al historial.</p>
+          <span className="eyebrow">Pacientes</span>
+          <h2>Directorio de pacientes</h2>
+          <p>Una lista limpia que permite entrar al historial de cada caso en segundos.</p>
         </div>
-        <button type="button" className="primary-btn" onClick={() => setShowCreateModal(true)}>
-          + Nuevo paciente
+        <button
+          className="primary-button"
+          onClick={() => {
+            setEditingPatient(null);
+            setModalOpen(true);
+          }}
+        >
+          <Plus size={16} />
+          Nuevo paciente
         </button>
-      </header>
+      </section>
 
-      <div className="panel filters-row">
-        <label>
-          Buscar
-          <input
-            placeholder="Nombre, email o telefono"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
+      <section className="panel">
+        <div className="toolbar">
+          <div className="search-input">
+            <Search size={16} />
+            <input
+              placeholder="Buscar por nombre, objetivo o email"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+          <div className="toolbar-summary">{filteredPatients.length} pacientes visibles</div>
+        </div>
+
+        {filteredPatients.length === 0 ? (
+          <EmptyState
+            title="No hay pacientes con ese criterio"
+            description="Prueba otra búsqueda o crea un nuevo paciente para la demo."
           />
-        </label>
-        <label>
-          Estado
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-            <option value="">Todos</option>
-            <option value="active">Activos</option>
-            <option value="inactive">Inactivos</option>
-          </select>
-        </label>
-        <button type="button" className="secondary-btn" onClick={loadPatients}>
-          Aplicar filtros
-        </button>
-      </div>
-
-      {error && <p className="error-text">{error}</p>}
-
-      <article className="panel">
-        {loading ? (
-          <p className="muted">Cargando pacientes...</p>
         ) : (
-          <div className="table-wrap">
+          <div className="table-shell">
             <table className="data-table">
               <thead>
                 <tr>
                   <th>Paciente</th>
+                  <th>Contacto</th>
                   <th>Objetivo principal</th>
                   <th>Estado</th>
-                  <th>Consultas</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {sortedPatients.map((patient) => (
+                {filteredPatients.map((patient) => (
                   <tr key={patient.id}>
                     <td>
-                      <strong>{patient.name}</strong>
-                      <p className="muted compact">{patient.email || "Sin email"}</p>
-                    </td>
-                    <td>{patient.main_goal}</td>
-                    <td>
-                      <span className={`pill ${patient.status}`}>{patient.status === "active" ? "Activo" : "Inactivo"}</span>
-                    </td>
-                    <td>{patient.consultations_count}</td>
-                    <td className="actions-cell">
-                      <Link className="link-btn" to={`/pacientes/${patient.id}`}>
-                        Ver ficha
+                      <Link to={`/patients/${patient.id}`} className="strong-link">
+                        {patient.name}
                       </Link>
-                      <button type="button" className="link-btn" onClick={() => setEditingPatient(patient)}>
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        className="link-btn danger"
-                        onClick={() => handleDelete(patient.id)}
-                      >
-                        Eliminar
-                      </button>
+                    </td>
+                    <td>
+                      <div className="stacked-copy">
+                        <span>{patient.email || 'Sin email'}</span>
+                        <small>{patient.phone || 'Sin teléfono'}</small>
+                      </div>
+                    </td>
+                    <td>{patient.goal || 'Sin objetivo definido'}</td>
+                    <td>
+                      <span className={`status-badge ${patient.status}`}>{patient.status === 'active' ? 'Activo' : 'Inactivo'}</span>
+                    </td>
+                    <td>
+                      <div className="table-actions">
+                        <button
+                          className="icon-button"
+                          onClick={() => {
+                            setEditingPatient(patient);
+                            setModalOpen(true);
+                          }}
+                        >
+                          <Pencil size={15} />
+                        </button>
+                        <button className="icon-button danger" onClick={() => handleDelete(patient.id)}>
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
-                {sortedPatients.length === 0 && (
-                  <tr>
-                    <td colSpan="5" className="muted">
-                      No hay pacientes para los filtros actuales.
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
         )}
-      </article>
+      </section>
 
-      {showCreateModal && (
-        <Modal title="Nuevo paciente" onClose={() => setShowCreateModal(false)}>
-          <PatientForm onSubmit={handleCreate} submitting={submitting} />
-        </Modal>
-      )}
-
-      {editingPatient && (
-        <Modal title="Editar paciente" onClose={() => setEditingPatient(null)}>
-          <PatientForm initialValues={editingPatient} onSubmit={handleUpdate} submitting={submitting} />
-        </Modal>
-      )}
-    </section>
+      <PatientFormModal
+        open={modalOpen}
+        patient={editingPatient}
+        onClose={() => {
+          setModalOpen(false);
+          setEditingPatient(null);
+        }}
+        onSubmit={handleSave}
+      />
+    </div>
   );
 }
-
-export default Patients;

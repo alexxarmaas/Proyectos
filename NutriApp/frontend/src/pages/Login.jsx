@@ -1,70 +1,84 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowRight, Leaf, ShieldCheck } from 'lucide-react';
+import api from '../lib/api';
 
-function Login() {
+export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
-  const [email, setEmail] = useState("laura@nutriapp.demo");
-  const [password, setPassword] = useState("demo1234");
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [email, setEmail] = useState('nutri@demo.com');
+  const [password, setPassword] = useState('admin123');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  async function handleSubmit(event) {
+  const handleLogin = async (event) => {
     event.preventDefault();
-    setError("");
-    setSubmitting(true);
+    setError('');
+    setIsLoading(true);
+
     try {
-      await login(email, password);
-      navigate("/");
-    } catch (loginError) {
-      setError(loginError.message);
+      const response = await api.post('/auth/login', { email, password });
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      navigate('/');
+      window.location.reload();
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || 'No se pudo iniciar sesión');
     } finally {
-      setSubmitting(false);
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
-    <section className="login-page">
-      <div className="login-panel">
-        <p className="eyebrow">Demo MVP para nutricionistas</p>
-        <h1>NutriApp</h1>
-        <p className="muted">
-          Gestiona pacientes, consultas, seguimiento y agenda en un solo lugar.
-        </p>
+    <div className="login-shell">
+      <section className="login-hero">
+        <div className="login-hero-card">
+          <span className="hero-pill">Demo vendible para nutricionistas</span>
+          <h1>Pacientes, consultas y seguimiento en un panel simple y profesional.</h1>
+          <p>
+            Una demo pensada para enseñar orden, claridad y ahorro de tiempo desde el primer vistazo.
+          </p>
 
-        <form className="login-form" onSubmit={handleSubmit}>
+          <div className="hero-points">
+            <div>
+              <Leaf size={18} />
+              <span>Ficha de paciente con evolución real</span>
+            </div>
+            <div>
+              <ShieldCheck size={18} />
+              <span>Agenda semanal clara para consulta independiente</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="login-panel">
+        <form className="login-card" onSubmit={handleLogin}>
+          <span className="eyebrow">Acceso demo</span>
+          <h2>Entra en NutriApp</h2>
+          <p>Usa las credenciales precargadas para enseñar el flujo completo del MVP.</p>
+
+          {error ? <div className="alert-error">{error}</div> : null}
+
           <label>
             Email
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-            />
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </label>
+
           <label>
-            Password
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-            />
+            Contraseña
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
           </label>
 
-          {error && <p className="error-text">{error}</p>}
-          <button type="submit" className="primary-btn" disabled={submitting}>
-            {submitting ? "Entrando..." : "Entrar"}
+          <button type="submit" className="primary-button full-width" disabled={isLoading}>
+            {isLoading ? 'Entrando...' : 'Abrir dashboard'}
+            <ArrowRight size={16} />
           </button>
-        </form>
 
-        <p className="credentials-tip">
-          Credenciales demo: <strong>laura@nutriapp.demo</strong> / <strong>demo1234</strong>
-        </p>
-      </div>
-    </section>
+          <div className="demo-access">
+            <strong>Demo:</strong> nutri@demo.com / admin123
+          </div>
+        </form>
+      </section>
+    </div>
   );
 }
-
-export default Login;

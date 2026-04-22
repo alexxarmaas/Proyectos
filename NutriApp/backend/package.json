@@ -1,21 +1,15 @@
 {
   "name": "nutriapp-backend",
   "version": "1.0.0",
-  "description": "API REST para demo MVP de nutricionistas",
+  "description": "API REST para demo MVP de gestion de pacientes y consultas de nutricion",
   "main": "server.js",
   "scripts": {
-    "dev": "node server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node server.js"
   },
-  "keywords": [
-    "express",
-    "sqlite",
-    "nutrition"
-  ],
-  "license": "MIT",
   "dependencies": {
     "cors": "^2.8.6",
     "express": "^5.2.1",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^6.0.1"
   }
 }

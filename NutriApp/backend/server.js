@@ -1,587 +1,417 @@
-const crypto = require("crypto");
-const express = require("express");
-const cors = require("cors");
-const { initDb, run, get, all } = require("./db");
-const { authRequired } = require("./middleware/auth");
+const express = require('express');
+const cors = require('cors');
+const db = require('./db');
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = Number(process.env.PORT) || 3002;
 
-app.use(
-  cors({
-    origin: "http://localhost:5173"
-  })
-);
+app.use(cors());
 app.use(express.json());
 
-function toNullableText(value) {
-  if (value === undefined || value === null || value === "") {
-    return null;
-  }
-  return String(value).trim();
+function all(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (error, rows) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      resolve(rows);
+    });
+  });
 }
 
-function nowIsoDate() {
-  return new Date().toISOString().slice(0, 10);
+function get(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (error, row) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      resolve(row);
+    });
+  });
 }
 
-app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok" });
+function run(sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function onRun(error) {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      resolve({ id: this.lastID, changes: this.changes });
+    });
+  });
+}
+
+function getStartOfWeek(dateString) {
+  const today = dateString ? new Date(`${dateString}T00:00:00`) : new Date();
+  const day = today.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + diff);
+  return monday;
+}
+
+function formatDate(date) {
+  return date.toISOString().split('T')[0];
+}
+
+app.get('/api/health', (_req, res) => {
+  res.json({ ok: true, product: 'NutriApp MVP' });
 });
 
-app.post("/api/auth/login", async (req, res, next) => {
+app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) {
-      res.status(400).json({ message: "Email y password son obligatorios" });
-      return;
-    }
-
     const user = await get(
-      "SELECT id, name, email, password FROM users WHERE email = ?",
-      [String(email).trim().toLowerCase()]
+      'SELECT id, name, email, role FROM users WHERE email = ? AND password = ?',
+      [email, password]
     );
-    if (!user || user.password !== password) {
-      res.status(401).json({ message: "Credenciales invalidas" });
+
+    if (!user) {
+      res.status(401).json({ success: false, message: 'Credenciales invalidas' });
       return;
     }
 
-    const token = crypto.randomBytes(24).toString("hex");
-    await run("INSERT INTO sessions (token, user_id) VALUES (?, ?)", [token, user.id]);
-
     res.json({
-      token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email
-      }
+      success: true,
+      token: 'nutriapp-demo-token',
+      user
     });
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-app.post("/api/auth/logout", authRequired, async (req, res, next) => {
+app.get('/api/dashboard', async (_req, res) => {
   try {
-    await run("DELETE FROM sessions WHERE token = ?", [req.authToken]);
-    res.json({ ok: true });
-  } catch (error) {
-    next(error);
-  }
-});
+    const today = formatDate(new Date());
 
-app.get("/api/auth/me", authRequired, (req, res) => {
-  res.json({ user: req.user });
-});
-
-app.get("/api/dashboard/summary", authRequired, async (_req, res, next) => {
-  try {
-    const today = nowIsoDate();
-
-    const [{ total: activePatients }, { total: upcomingCount }] = await Promise.all([
-      get("SELECT COUNT(*) AS total FROM patients WHERE status = 'active'"),
-      get(
-        "SELECT COUNT(*) AS total FROM consultations WHERE status = 'pending' AND date >= ?",
-        [today]
-      )
-    ]);
-
-    const upcomingConsultations = await all(
-      `
-      SELECT c.id, c.date, c.hour, c.status, p.name AS patient_name
-      FROM consultations c
-      INNER JOIN patients p ON p.id = c.patient_id
-      WHERE c.status = 'pending' AND c.date >= ?
-      ORDER BY c.date ASC, c.hour ASC
-      LIMIT 5
-    `,
-      [today]
-    );
-
-    const latestFollowups = await all(
-      `
-      SELECT 'consulta' AS source, cf.created_at, cf.content, p.name AS patient_name
-      FROM consultation_followups cf
-      INNER JOIN consultations c ON c.id = cf.consultation_id
-      INNER JOIN patients p ON p.id = c.patient_id
-      UNION ALL
-      SELECT 'nota' AS source, pn.created_at, pn.content, p.name AS patient_name
-      FROM patient_notes pn
-      INNER JOIN patients p ON p.id = pn.patient_id
-      ORDER BY created_at DESC
-      LIMIT 6
-    `
-    );
+    const [activePatients, upcomingConsultations, recentFollowUps, nextConsultations, monthlyActivity] =
+      await Promise.all([
+        get(`SELECT COUNT(*) AS total FROM patients WHERE status = 'active'`),
+        get(
+          `SELECT COUNT(*) AS total
+           FROM consultations
+           WHERE status = 'pending' AND date >= ?`,
+          [today]
+        ),
+        all(
+          `SELECT c.id, c.date, c.time, c.status, c.weight, c.observations, p.name AS patient_name
+           FROM consultations c
+           INNER JOIN patients p ON p.id = c.patient_id
+           WHERE c.status = 'completed'
+           ORDER BY c.date DESC, c.time DESC
+           LIMIT 4`
+        ),
+        all(
+          `SELECT c.id, c.date, c.time, c.status, c.weight, p.id AS patient_id, p.name AS patient_name
+           FROM consultations c
+           INNER JOIN patients p ON p.id = c.patient_id
+           WHERE c.status = 'pending' AND c.date >= ?
+           ORDER BY c.date ASC, c.time ASC
+           LIMIT 5`,
+          [today]
+        ),
+        all(
+          `SELECT substr(date, 1, 7) AS month, COUNT(*) AS total
+           FROM consultations
+           GROUP BY substr(date, 1, 7)
+           ORDER BY month ASC`
+        )
+      ]);
 
     res.json({
-      activePatients,
-      upcomingCount,
-      upcomingConsultations,
-      latestFollowups
+      activePatients: activePatients.total,
+      upcomingConsultations: upcomingConsultations.total,
+      recentFollowUps,
+      nextConsultations,
+      monthlyActivity
     });
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-app.get("/api/patients", authRequired, async (req, res, next) => {
+app.get('/api/patients', async (_req, res) => {
   try {
-    const { status = "", search = "" } = req.query;
-    const conditions = [];
-    const params = [];
-
-    if (status === "active" || status === "inactive") {
-      conditions.push("p.status = ?");
-      params.push(status);
-    }
-    if (String(search).trim()) {
-      conditions.push("(p.name LIKE ? OR p.email LIKE ? OR p.phone LIKE ?)");
-      const wildcard = `%${String(search).trim()}%`;
-      params.push(wildcard, wildcard, wildcard);
-    }
-
-    const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-    const rows = await all(
-      `
-      SELECT
-        p.*,
-        COUNT(c.id) AS consultations_count,
-        MAX(c.date || ' ' || c.hour) AS last_consultation
-      FROM patients p
-      LEFT JOIN consultations c ON c.patient_id = p.id
-      ${whereClause}
-      GROUP BY p.id
-      ORDER BY p.created_at DESC
-    `,
-      params
+    const patients = await all(
+      `SELECT
+         p.*,
+         (
+           SELECT MAX(c.date)
+           FROM consultations c
+           WHERE c.patient_id = p.id AND c.status = 'completed'
+         ) AS last_consultation_date,
+         (
+           SELECT MIN(c.date)
+           FROM consultations c
+           WHERE c.patient_id = p.id AND c.status = 'pending'
+         ) AS next_consultation_date
+       FROM patients p
+       ORDER BY p.status = 'active' DESC, p.name ASC`
     );
 
-    res.json(rows);
+    res.json(patients);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-app.post("/api/patients", authRequired, async (req, res, next) => {
+app.post('/api/patients', async (req, res) => {
   try {
-    const { name, email, phone, mainGoal, status = "active", generalNotes = "" } = req.body;
-    if (!name || !mainGoal) {
-      res.status(400).json({ message: "Nombre y objetivo son obligatorios" });
-      return;
-    }
-    if (!["active", "inactive"].includes(status)) {
-      res.status(400).json({ message: "Estado de paciente invalido" });
+    const { name, email, phone, goal, status = 'active', general_notes = '' } = req.body;
+
+    if (!name) {
+      res.status(400).json({ error: 'El nombre es obligatorio' });
       return;
     }
 
     const result = await run(
-      `
-      INSERT INTO patients (name, email, phone, main_goal, status, general_notes, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
-    `,
-      [
-        String(name).trim(),
-        toNullableText(email),
-        toNullableText(phone),
-        String(mainGoal).trim(),
-        status,
-        String(generalNotes || "").trim()
-      ]
+      `INSERT INTO patients (name, email, phone, goal, status, general_notes, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      [name, email, phone, goal, status, general_notes]
     );
 
-    const created = await get("SELECT * FROM patients WHERE id = ?", [result.id]);
-    res.status(201).json(created);
+    const patient = await get(`SELECT * FROM patients WHERE id = ?`, [result.id]);
+    res.status(201).json(patient);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-app.get("/api/patients/:id", authRequired, async (req, res, next) => {
+app.get('/api/patients/:id', async (req, res) => {
   try {
-    const patientId = Number(req.params.id);
-    const patient = await get("SELECT * FROM patients WHERE id = ?", [patientId]);
+    const patient = await get(`SELECT * FROM patients WHERE id = ?`, [req.params.id]);
+
     if (!patient) {
-      res.status(404).json({ message: "Paciente no encontrado" });
+      res.status(404).json({ error: 'Paciente no encontrado' });
       return;
     }
 
-    const [notes, consultations] = await Promise.all([
+    const [consultations, notes] = await Promise.all([
       all(
-        `
-        SELECT id, patient_id, content, created_at
-        FROM patient_notes
-        WHERE patient_id = ?
-        ORDER BY created_at DESC
-      `,
-        [patientId]
+        `SELECT c.*, p.name AS patient_name
+         FROM consultations c
+         INNER JOIN patients p ON p.id = c.patient_id
+         WHERE c.patient_id = ?
+         ORDER BY c.date DESC, c.time DESC`,
+        [req.params.id]
       ),
       all(
-        `
-        SELECT c.*, COUNT(cf.id) AS followups_count
-        FROM consultations c
-        LEFT JOIN consultation_followups cf ON cf.consultation_id = c.id
-        WHERE c.patient_id = ?
-        GROUP BY c.id
-        ORDER BY c.date DESC, c.hour DESC
-      `,
-        [patientId]
+        `SELECT * FROM patient_notes WHERE patient_id = ? ORDER BY created_at DESC`,
+        [req.params.id]
       )
     ]);
-
-    const consultationIds = consultations.map((consultation) => consultation.id);
-    const followups = consultationIds.length
-      ? await all(
-          `
-          SELECT cf.*, c.patient_id
-          FROM consultation_followups cf
-          INNER JOIN consultations c ON c.id = cf.consultation_id
-          WHERE cf.consultation_id IN (${consultationIds.map(() => "?").join(",")})
-          ORDER BY cf.created_at DESC
-        `,
-          consultationIds
-        )
-      : [];
 
     res.json({
       ...patient,
-      notes,
       consultations,
-      followups
+      notes
     });
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-app.put("/api/patients/:id", authRequired, async (req, res, next) => {
+app.put('/api/patients/:id', async (req, res) => {
   try {
-    const patientId = Number(req.params.id);
-    const { name, email, phone, mainGoal, status, generalNotes = "" } = req.body;
-    if (!name || !mainGoal || !status) {
-      res.status(400).json({ message: "Faltan campos obligatorios" });
-      return;
-    }
-    if (!["active", "inactive"].includes(status)) {
-      res.status(400).json({ message: "Estado de paciente invalido" });
-      return;
-    }
-
-    const existing = await get("SELECT id FROM patients WHERE id = ?", [patientId]);
-    if (!existing) {
-      res.status(404).json({ message: "Paciente no encontrado" });
-      return;
-    }
+    const { name, email, phone, goal, status, general_notes = '' } = req.body;
 
     await run(
-      `
-      UPDATE patients
-      SET name = ?, email = ?, phone = ?, main_goal = ?, status = ?, general_notes = ?, updated_at = datetime('now')
-      WHERE id = ?
-    `,
-      [
-        String(name).trim(),
-        toNullableText(email),
-        toNullableText(phone),
-        String(mainGoal).trim(),
-        status,
-        String(generalNotes || "").trim(),
-        patientId
-      ]
+      `UPDATE patients
+       SET name = ?, email = ?, phone = ?, goal = ?, status = ?, general_notes = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [name, email, phone, goal, status, general_notes, req.params.id]
     );
 
-    const updated = await get("SELECT * FROM patients WHERE id = ?", [patientId]);
-    res.json(updated);
+    const patient = await get(`SELECT * FROM patients WHERE id = ?`, [req.params.id]);
+    res.json(patient);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-app.delete("/api/patients/:id", authRequired, async (req, res, next) => {
+app.delete('/api/patients/:id', async (req, res) => {
   try {
-    const patientId = Number(req.params.id);
-    const deleted = await run("DELETE FROM patients WHERE id = ?", [patientId]);
-    if (!deleted.changes) {
-      res.status(404).json({ message: "Paciente no encontrado" });
-      return;
-    }
-    res.json({ ok: true });
+    const result = await run(`DELETE FROM patients WHERE id = ?`, [req.params.id]);
+    res.json({ success: true, deleted: result.changes });
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-app.post("/api/patients/:id/notes", authRequired, async (req, res, next) => {
+app.post('/api/patients/:id/notes', async (req, res) => {
   try {
-    const patientId = Number(req.params.id);
     const { content } = req.body;
-    if (!content || !String(content).trim()) {
-      res.status(400).json({ message: "El contenido de la nota es obligatorio" });
-      return;
-    }
 
-    const patient = await get("SELECT id FROM patients WHERE id = ?", [patientId]);
-    if (!patient) {
-      res.status(404).json({ message: "Paciente no encontrado" });
+    if (!content) {
+      res.status(400).json({ error: 'La nota no puede estar vacia' });
       return;
     }
 
     const result = await run(
-      "INSERT INTO patient_notes (patient_id, content) VALUES (?, ?)",
-      [patientId, String(content).trim()]
+      `INSERT INTO patient_notes (patient_id, content) VALUES (?, ?)`,
+      [req.params.id, content]
     );
-    const note = await get("SELECT * FROM patient_notes WHERE id = ?", [result.id]);
+
+    const note = await get(`SELECT * FROM patient_notes WHERE id = ?`, [result.id]);
     res.status(201).json(note);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-app.get("/api/consultations", authRequired, async (req, res, next) => {
+app.delete('/api/patients/:patientId/notes/:noteId', async (req, res) => {
   try {
-    const { status = "", patientId = "", from = "", to = "" } = req.query;
-    const conditions = [];
-    const params = [];
+    const result = await run(
+      `DELETE FROM patient_notes WHERE id = ? AND patient_id = ?`,
+      [req.params.noteId, req.params.patientId]
+    );
 
-    if (["pending", "completed", "cancelled"].includes(String(status))) {
-      conditions.push("c.status = ?");
-      params.push(status);
-    }
-    if (patientId) {
-      conditions.push("c.patient_id = ?");
-      params.push(Number(patientId));
-    }
-    if (from) {
-      conditions.push("c.date >= ?");
-      params.push(from);
-    }
-    if (to) {
-      conditions.push("c.date <= ?");
-      params.push(to);
-    }
+    res.json({ success: true, deleted: result.changes });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
-    const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-
+app.get('/api/consultations', async (_req, res) => {
+  try {
     const consultations = await all(
-      `
-      SELECT c.*, p.name AS patient_name, COUNT(cf.id) AS followups_count
-      FROM consultations c
-      INNER JOIN patients p ON p.id = c.patient_id
-      LEFT JOIN consultation_followups cf ON cf.consultation_id = c.id
-      ${whereClause}
-      GROUP BY c.id
-      ORDER BY c.date DESC, c.hour DESC
-    `,
-      params
+      `SELECT c.*, p.name AS patient_name
+       FROM consultations c
+       INNER JOIN patients p ON p.id = c.patient_id
+       ORDER BY c.date DESC, c.time DESC`
     );
 
     res.json(consultations);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-app.post("/api/consultations", authRequired, async (req, res, next) => {
+app.post('/api/consultations', async (req, res) => {
   try {
     const {
-      patientId,
+      patient_id,
       date,
-      hour,
-      weight = null,
-      observations = "",
-      habits = "",
-      recommendations = "",
-      status = "pending"
+      time,
+      weight,
+      observations = '',
+      habits = '',
+      recommendations = '',
+      status = 'pending'
     } = req.body;
 
-    if (!patientId || !date || !hour) {
-      res.status(400).json({ message: "Paciente, fecha y hora son obligatorios" });
-      return;
-    }
-    if (!["pending", "completed", "cancelled"].includes(status)) {
-      res.status(400).json({ message: "Estado de consulta invalido" });
-      return;
-    }
-
-    const patient = await get("SELECT id FROM patients WHERE id = ?", [Number(patientId)]);
-    if (!patient) {
-      res.status(404).json({ message: "Paciente no encontrado" });
+    if (!patient_id || !date || !time) {
+      res.status(400).json({ error: 'Paciente, fecha y hora son obligatorios' });
       return;
     }
 
     const result = await run(
-      `
-      INSERT INTO consultations
-      (patient_id, date, hour, weight, observations, habits, recommendations, status, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-    `,
-      [
-        Number(patientId),
-        date,
-        hour,
-        weight === null || weight === "" ? null : Number(weight),
-        String(observations || "").trim(),
-        String(habits || "").trim(),
-        String(recommendations || "").trim(),
-        status
-      ]
+      `INSERT INTO consultations (
+        patient_id, date, time, weight, observations, habits, recommendations, status, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      [patient_id, date, time, weight || null, observations, habits, recommendations, status]
     );
 
-    const created = await get(
-      `
-      SELECT c.*, p.name AS patient_name
-      FROM consultations c
-      INNER JOIN patients p ON p.id = c.patient_id
-      WHERE c.id = ?
-    `,
+    const consultation = await get(
+      `SELECT c.*, p.name AS patient_name
+       FROM consultations c
+       INNER JOIN patients p ON p.id = c.patient_id
+       WHERE c.id = ?`,
       [result.id]
     );
 
-    res.status(201).json(created);
+    res.status(201).json(consultation);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-app.put("/api/consultations/:id", authRequired, async (req, res, next) => {
+app.put('/api/consultations/:id', async (req, res) => {
   try {
-    const consultationId = Number(req.params.id);
     const {
-      patientId,
+      patient_id,
       date,
-      hour,
-      weight = null,
-      observations = "",
-      habits = "",
-      recommendations = "",
-      status = "pending"
+      time,
+      weight,
+      observations = '',
+      habits = '',
+      recommendations = '',
+      status = 'pending'
     } = req.body;
 
-    if (!patientId || !date || !hour) {
-      res.status(400).json({ message: "Paciente, fecha y hora son obligatorios" });
-      return;
-    }
-    if (!["pending", "completed", "cancelled"].includes(status)) {
-      res.status(400).json({ message: "Estado de consulta invalido" });
-      return;
-    }
-
-    const existing = await get("SELECT id FROM consultations WHERE id = ?", [consultationId]);
-    if (!existing) {
-      res.status(404).json({ message: "Consulta no encontrada" });
-      return;
-    }
-
     await run(
-      `
-      UPDATE consultations
-      SET patient_id = ?, date = ?, hour = ?, weight = ?, observations = ?, habits = ?, recommendations = ?, status = ?, updated_at = datetime('now')
-      WHERE id = ?
-    `,
-      [
-        Number(patientId),
-        date,
-        hour,
-        weight === null || weight === "" ? null : Number(weight),
-        String(observations || "").trim(),
-        String(habits || "").trim(),
-        String(recommendations || "").trim(),
-        status,
-        consultationId
-      ]
+      `UPDATE consultations
+       SET patient_id = ?, date = ?, time = ?, weight = ?, observations = ?, habits = ?, recommendations = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [patient_id, date, time, weight || null, observations, habits, recommendations, status, req.params.id]
     );
 
-    const updated = await get(
-      `
-      SELECT c.*, p.name AS patient_name
-      FROM consultations c
-      INNER JOIN patients p ON p.id = c.patient_id
-      WHERE c.id = ?
-    `,
-      [consultationId]
+    const consultation = await get(
+      `SELECT c.*, p.name AS patient_name
+       FROM consultations c
+       INNER JOIN patients p ON p.id = c.patient_id
+       WHERE c.id = ?`,
+      [req.params.id]
     );
 
-    res.json(updated);
+    res.json(consultation);
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-app.delete("/api/consultations/:id", authRequired, async (req, res, next) => {
+app.delete('/api/consultations/:id', async (req, res) => {
   try {
-    const consultationId = Number(req.params.id);
-    const deleted = await run("DELETE FROM consultations WHERE id = ?", [consultationId]);
-    if (!deleted.changes) {
-      res.status(404).json({ message: "Consulta no encontrada" });
-      return;
-    }
-    res.json({ ok: true });
+    const result = await run(`DELETE FROM consultations WHERE id = ?`, [req.params.id]);
+    res.json({ success: true, deleted: result.changes });
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-app.post("/api/consultations/:id/followups", authRequired, async (req, res, next) => {
+app.get('/api/agenda/week', async (req, res) => {
   try {
-    const consultationId = Number(req.params.id);
-    const { content } = req.body;
-    if (!content || !String(content).trim()) {
-      res.status(400).json({ message: "El contenido del seguimiento es obligatorio" });
-      return;
-    }
+    const start = getStartOfWeek(req.query.start);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
 
-    const consultation = await get("SELECT id FROM consultations WHERE id = ?", [consultationId]);
-    if (!consultation) {
-      res.status(404).json({ message: "Consulta no encontrada" });
-      return;
-    }
-
-    const result = await run(
-      "INSERT INTO consultation_followups (consultation_id, content) VALUES (?, ?)",
-      [consultationId, String(content).trim()]
-    );
-    const followup = await get("SELECT * FROM consultation_followups WHERE id = ?", [result.id]);
-    res.status(201).json(followup);
-  } catch (error) {
-    next(error);
-  }
-});
-
-app.get("/api/agenda/week", authRequired, async (req, res, next) => {
-  try {
-    const startDate = req.query.startDate || nowIsoDate();
     const consultations = await all(
-      `
-      SELECT c.id, c.date, c.hour, c.status, p.id AS patient_id, p.name AS patient_name
-      FROM consultations c
-      INNER JOIN patients p ON p.id = c.patient_id
-      WHERE c.date BETWEEN date(?) AND date(?, '+6 day')
-      ORDER BY c.date ASC, c.hour ASC
-    `,
-      [startDate, startDate]
+      `SELECT c.*, p.name AS patient_name
+       FROM consultations c
+       INNER JOIN patients p ON p.id = c.patient_id
+       WHERE c.date BETWEEN ? AND ?
+       ORDER BY c.date ASC, c.time ASC`,
+      [formatDate(start), formatDate(end)]
     );
 
     res.json({
-      startDate,
-      endDate: null,
+      start: formatDate(start),
+      end: formatDate(end),
       consultations
     });
   } catch (error) {
-    next(error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-app.use((err, _req, res, _next) => {
-  // Only expose plain text error for demo/debug speed.
-  console.error(err);
-  res.status(500).json({ message: "Error interno del servidor" });
+const server = app.listen(PORT, () => {
+  console.log(`NutriApp backend running on http://localhost:${PORT}`);
 });
 
-async function start() {
-  await initDb();
-  app.listen(PORT, () => {
-    console.log(`NutriApp API corriendo en http://localhost:${PORT}`);
-  });
-}
+server.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. Use another port with PORT=<value>.`);
+    process.exit(1);
+    return;
+  }
 
-start();
+  console.error('Failed to start NutriApp backend:', error.message);
+  process.exit(1);
+});

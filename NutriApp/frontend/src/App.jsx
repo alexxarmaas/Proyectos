@@ -1,29 +1,37 @@
-import { Navigate, Route, Routes } from "react-router-dom";
-import Layout from "./components/Layout";
-import ProtectedRoute from "./components/ProtectedRoute";
-import Dashboard from "./pages/Dashboard";
-import Patients from "./pages/Patients";
-import ClientProfile from "./pages/ClientProfile";
-import Consultations from "./pages/Consultations";
-import Agenda from "./pages/Agenda";
-import Login from "./pages/Login";
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import Layout from './components/Layout';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import Patients from './pages/Patients';
+import PatientProfile from './pages/PatientProfile';
+import Consultations from './pages/Consultations';
+import Agenda from './pages/Agenda';
 
-function App() {
-  return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route element={<ProtectedRoute />}>
-        <Route element={<Layout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="/pacientes" element={<Patients />} />
-          <Route path="/pacientes/:id" element={<ClientProfile />} />
-          <Route path="/consultas" element={<Consultations />} />
-          <Route path="/agenda" element={<Agenda />} />
-        </Route>
-      </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-  );
+function PrivateRoute({ children }) {
+  const isAuthenticated = Boolean(localStorage.getItem('token'));
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
 }
 
-export default App;
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/"
+          element={
+            <PrivateRoute>
+              <Layout />
+            </PrivateRoute>
+          }
+        >
+          <Route index element={<Dashboard />} />
+          <Route path="patients" element={<Patients />} />
+          <Route path="patients/:id" element={<PatientProfile />} />
+          <Route path="consultations" element={<Consultations />} />
+          <Route path="agenda" element={<Agenda />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}

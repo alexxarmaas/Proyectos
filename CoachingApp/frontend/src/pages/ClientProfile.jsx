@@ -64,15 +64,16 @@ export default function ClientProfile() {
     // Simulate AI generation delay
     setTimeout(() => {
       const completedSessions = client.sessions.filter(s => s.status === 'completed');
+      const lastSessionTopic = completedSessions.length > 0 ? completedSessions[0]?.topic : 'General';
       const text = `Resumen Ejecutivo del Proceso de ${client.name}
 
 Objetivo Principal: ${client.objective || 'No definido'}
 Sesiones completadas: ${completedSessions.length}
 
 Progreso Observado:
-- El cliente ha avanzado consistentemente en su meta de \${client.objective}.
+- El cliente ha avanzado consistentemente en su meta de ${client.objective || 'su objetivo principal'}.
 - Se nota una mejora en los puntos tratados en sesiones anteriores.
-- Durante la última sesión ("\${completedSessions[0]?.topic || 'General'}"), se destacó el compromiso en las acciones asignadas.
+- Durante la última sesión ("${lastSessionTopic}"), se destacó el compromiso en las acciones asignadas.
 
 Siguientes pasos recomendados:
 1. Mantener el seguimiento en el próximo hito.
@@ -86,7 +87,7 @@ Generado automáticamente por CoachCRM AI.`;
   }
 
   const getStatusLabel = (status) => {
-    const map = { lead: 'Prospecto', active: 'Activo', paused: 'En Pausa', completed: 'Finalizado' };
+    const map = { lead: 'Prospecto', active: 'Activo', paused: 'En Pausa', completed: 'Finalizado', inactive: 'Inactivo' };
     return map[status] || status;
   };
 
@@ -254,13 +255,24 @@ Generado automáticamente por CoachCRM AI.`;
                   <p>Analizando sesiones y generando resumen ejecutivo...</p>
                 </div>
               ) : (
-                <textarea
-                  className="form-input"
-                  rows="12"
-                  readOnly
-                  value={magicSummary}
-                  style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
-                />
+                <div className="summary-display">
+                  {magicSummary.split('\n').map((line, idx) => {
+                    // Títulos en negrita
+                    if (line.includes('Resumen Ejecutivo') || line.includes('Objetivo Principal') || line.includes('Progreso Observado') || line.includes('Siguientes pasos')) {
+                      return <h4 key={idx} className="summary-section-title">{line}</h4>;
+                    }
+                    // Líneas vacías
+                    if (line.trim() === '') {
+                      return <div key={idx} style={{ height: '8px' }} />;
+                    }
+                    // Bullets
+                    if (line.trim().startsWith('-') || /^\d+\./.test(line.trim())) {
+                      return <p key={idx} className="summary-bullet">{line}</p>;
+                    }
+                    // Texto normal
+                    return <p key={idx} className="summary-text">{line}</p>;
+                  })}
+                </div>
               )}
             </div>
             <div className="modal-footer">

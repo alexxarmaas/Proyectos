@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, X, Trello, List } from 'lucide-react';
+import { Plus, X, LayoutGrid, List } from 'lucide-react';
 
 export default function Clients() {
   const [clients, setClients] = useState([]);
@@ -47,7 +47,7 @@ export default function Clients() {
   };
 
   const getStatusLabel = (status) => {
-    const map = { lead: 'Prospecto', active: 'Activo', paused: 'En Pausa', completed: 'Finalizado' };
+    const map = { lead: 'Prospecto', active: 'Activo', paused: 'En Pausa', completed: 'Finalizado', inactive: 'Inactivo' };
     return map[status] || status;
   };
 
@@ -71,7 +71,7 @@ export default function Clients() {
             <button
               style={{ padding: '8px 12px', background: viewMode === 'kanban' ? 'var(--table-hover)' : 'transparent', color: viewMode === 'kanban' ? 'var(--primary)' : 'var(--text-muted)' }}
               onClick={() => setViewMode('kanban')}
-            ><Trello size={18} /></button>
+            ><LayoutGrid size={18} /></button>
           </div>
           <button className="btn btn-primary" onClick={() => setShowModal(true)}>
             <Plus size={18} />
