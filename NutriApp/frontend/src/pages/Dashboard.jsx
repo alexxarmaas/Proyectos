@@ -143,7 +143,7 @@ export default function Dashboard() {
             description="Las consultas completadas con observaciones aparecerán aquí."
           />
         ) : (
-          <div className="table-shell">
+          <div className="table-wrapper">
             <table className="data-table">
               <thead>
                 <tr>

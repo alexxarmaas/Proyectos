@@ -96,7 +96,7 @@ export default function Consultations() {
             description="Crea una consulta o cambia el filtro para ver más resultados."
           />
         ) : (
-          <div className="table-shell">
+          <div className="table-wrapper">
             <table className="data-table">
               <thead>
                 <tr>

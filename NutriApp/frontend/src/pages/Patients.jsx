@@ -89,7 +89,7 @@ export default function Patients() {
             description="Prueba otra búsqueda o crea un nuevo paciente para la demo."
           />
         ) : (
-          <div className="table-shell">
+          <div className="table-wrapper">
             <table className="data-table">
               <thead>
                 <tr>

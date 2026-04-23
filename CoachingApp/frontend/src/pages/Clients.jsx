@@ -57,13 +57,13 @@ export default function Clients() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+      <div className="clients-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h1 className="page-title">Directorio de Clientes</h1>
           <p className="page-description">Gestiona la información y pipeline de tus clientes</p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <div style={{ display: 'flex', background: 'var(--card-bg)', borderRadius: '8px', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
+        <div className="clients-actions" style={{ display: 'flex', gap: '12px' }}>
+          <div className="view-toggle" style={{ display: 'flex', background: 'var(--card-bg)', borderRadius: '8px', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
             <button
               style={{ padding: '8px 12px', background: viewMode === 'table' ? 'var(--table-hover)' : 'transparent', color: viewMode === 'table' ? 'var(--primary)' : 'var(--text-muted)' }}
               onClick={() => setViewMode('table')}
@@ -82,46 +82,48 @@ export default function Clients() {
 
       {viewMode === 'table' ? (
         <div className="panel">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Email</th>
-                <th>Objetivo Principal</th>
-                <th>Fase</th>
-                <th>Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {clients.map(client => (
-                <tr key={client.id}>
-                  <td style={{ fontWeight: 500, color: 'var(--text-main)' }}>{client.name}</td>
-                  <td style={{ color: 'var(--text-muted)' }}>{client.email || '-'}</td>
-                  <td>{client.objective || 'Sin definir'}</td>
-                  <td>
-                    <span className={`badge ${client.status}`}>
-                      {getStatusLabel(client.status)}
-                    </span>
-                  </td>
-                  <td>
-                    <Link to={`/clients/${client.id}`} className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '6px 12px' }}>
-                      Ver Perfil
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-              {clients.length === 0 && (
+          <div className="table-wrapper">
+            <table className="data-table">
+              <thead>
                 <tr>
-                  <td colSpan="5" style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                    Aún no tienes clientes. Crea el primero.
-                  </td>
+                  <th>Nombre</th>
+                  <th>Email</th>
+                  <th>Objetivo Principal</th>
+                  <th>Fase</th>
+                  <th>Acción</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {clients.map(client => (
+                  <tr key={client.id}>
+                    <td style={{ fontWeight: 500, color: 'var(--text-main)' }}>{client.name}</td>
+                    <td style={{ color: 'var(--text-muted)' }}>{client.email || '-'}</td>
+                    <td>{client.objective || 'Sin definir'}</td>
+                    <td>
+                      <span className={`badge ${client.status}`}>
+                        {getStatusLabel(client.status)}
+                      </span>
+                    </td>
+                    <td>
+                      <Link to={`/clients/${client.id}`} className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '6px 12px' }}>
+                        Ver Perfil
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+                {clients.length === 0 && (
+                  <tr>
+                    <td colSpan="5" style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                      Aún no tienes clientes. Crea el primero.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', alignItems: 'start' }}>
+        <div className="kanban-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', alignItems: 'start' }}>
           {columns.map(col => (
             <div key={col} style={{ background: 'var(--table-hover)', borderRadius: '12px', padding: '16px', border: '1px solid var(--border-color)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -158,7 +160,7 @@ export default function Clients() {
                   <label className="form-label">Nombre Completo *</label>
                   <input type="text" className="form-input" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Ej: Laura Gómez" />
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div className="form-grid-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div className="form-group">
                     <label className="form-label">Email</label>
                     <input type="email" className="form-input" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="laura@ejemplo.com" />

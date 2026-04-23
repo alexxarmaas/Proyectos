@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="CoachCRM icon">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4338ca" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)" />
+  <circle cx="256" cy="256" r="144" fill="#ffffff" opacity="0.16" />
+  <path d="M342 196c0 46-37 83-83 83h-24v34c0 12-13 17-22 9l-58-58c-9-9-3-24 9-24h24c0-45 37-82 82-82 30 0 57 15 72 40l-30 17c-9-15-24-22-42-22-24 0-43 20-43 44h36c26 0 45-19 45-41H342z" fill="#ffffff" />
+</svg>

@@ -842,8 +842,24 @@ label {
   display: none;
 }
 
-@media (max-width: 1180px) {
-  .stats-grid,
+.sidebar-backdrop {
+  display: none;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.table-wrapper table {
+  min-width: 720px;
+}
+
+@media (max-width: 1100px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .content-grid,
   .profile-grid,
   .timeline-grid,
@@ -852,26 +868,54 @@ label {
     grid-template-columns: 1fr;
   }
 
+  .two-columns,
+  .three-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .agenda-column {
     min-height: auto;
   }
 }
 
-@media (max-width: 920px) {
+@media (max-width: 768px) {
   .app-shell {
     grid-template-columns: 1fr;
   }
 
   .sidebar {
     position: fixed;
-    left: -100%;
-    width: min(320px, calc(100vw - 2rem));
-    transition: left 0.25s ease;
-    z-index: 30;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 260px;
+    height: 100vh;
+    max-height: 100vh;
+    overflow-y: auto;
+    transform: translateX(-260px);
+    transition: transform 0.28s ease;
+    z-index: 40;
   }
 
-  .sidebar.sidebar-open {
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    top: 0;
     left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(27, 43, 35, 0.3);
+    backdrop-filter: blur(4px);
+    z-index: 35;
+  }
+
+  .sidebar-brand {
+    position: relative;
   }
 
   .mobile-menu,
@@ -880,16 +924,33 @@ label {
     color: inherit;
   }
 
+  .mobile-close {
+    position: absolute;
+    right: 0;
+    top: 0;
+  }
+
+  .main-shell {
+    margin-left: 0;
+  }
+
   .page-shell,
   .topbar {
     padding: 1.2rem;
   }
 
+  .topbar-left {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .topbar-left h1 {
+    font-size: 1.15rem;
+  }
+
   .hero-header,
   .profile-header,
-  .timeline-header,
-  .topbar,
-  .topbar-left {
+  .timeline-header {
     flex-direction: column;
     align-items: flex-start;
   }
@@ -897,5 +958,22 @@ label {
   .two-columns,
   .three-columns {
     grid-template-columns: 1fr;
+  }
+
+  .topbar-user {
+    align-self: flex-end;
+    width: 100%;
+    padding-top: 1rem;
+    border-top: 1px solid var(--line);
+    margin-top: 1rem;
+  }
+
+  .panel-heading {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .search-input {
+    max-width: 100%;
   }
 }

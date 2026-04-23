@@ -104,7 +104,7 @@ Generado automáticamente por CoachCRM AI.`;
         >
           <ArrowLeft size={16} /> Volver
         </button>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div className="profile-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               {client.name}
@@ -112,7 +112,7 @@ Generado automáticamente por CoachCRM AI.`;
             </h1>
             <p className="page-description">Objetivo: <strong>{client.objective || 'Sin definir'}</strong></p>
           </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div className="profile-header-actions" style={{ display: 'flex', gap: '12px' }}>
             <button className="btn btn-secondary" onClick={generateMagicSummary} style={{ borderColor: 'var(--primary)', color: 'var(--primary)' }}>
               <Wand2 size={16} /> Resumen Mágico
             </button>
@@ -123,7 +123,7 @@ Generado automáticamente por CoachCRM AI.`;
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '24px' }}>
+      <div className="profile-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '24px' }}>
         {/* Main Col: Sessions History */}
         <div>
           <div className="panel">
@@ -139,7 +139,7 @@ Generado automáticamente por CoachCRM AI.`;
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {client.sessions.map((sess) => (
                     <div key={sess.id} style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '16px', backgroundColor: sess.status === 'completed' ? 'var(--table-hover)' : 'var(--card-bg)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                      <div className="session-item-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                         <div>
                           <h4 style={{ fontSize: '1.05rem', fontWeight: 600, marginBottom: '4px' }}>
                             {sess.topic || 'Sesión General'}
@@ -163,7 +163,7 @@ Generado automáticamente por CoachCRM AI.`;
                       )}
 
                       {sess.status === 'pending' && (
-                        <div style={{ display: 'flex', gap: '8px', marginTop: '12px', borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>
+                        <div className="session-actions" style={{ display: 'flex', gap: '8px', marginTop: '12px', borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>
                           <button className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '4px 10px' }} onClick={() => markSessionStatus(sess.id, sess, 'completed')}>
                             Marcar como Completada
                           </button>
@@ -212,7 +212,7 @@ Generado automáticamente por CoachCRM AI.`;
             </div>
             <form onSubmit={handleCreateSession}>
               <div className="modal-body">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div className="form-grid-two" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div className="form-group">
                     <label className="form-label">Fecha *</label>
                     <input type="date" className="form-input" required value={sessionForm.date} onChange={e => setSessionForm({ ...sessionForm, date: e.target.value })} />

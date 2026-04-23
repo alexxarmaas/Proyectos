@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { useMemo, useState, useEffect } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   CalendarDays,
   LayoutDashboard,
@@ -20,10 +20,20 @@ const navigation = [
 
 export default function Layout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const location = useLocation();
   const user = useMemo(() => {
     const saved = localStorage.getItem('user');
     return saved ? JSON.parse(saved) : { name: 'Nutri Demo' };
   }, []);
+
+  useEffect(() => {
+    setIsSidebarOpen(false);
+    document.body.style.overflow = 'auto';
+  }, [location.pathname]);
+
+  useEffect(() => {
+    document.body.style.overflow = isSidebarOpen ? 'hidden' : 'auto';
+  }, [isSidebarOpen]);
 
   const logout = () => {
     localStorage.removeItem('token');
@@ -33,7 +43,8 @@ export default function Layout() {
 
   return (
     <div className="app-shell">
-      <aside className={`sidebar ${isSidebarOpen ? 'sidebar-open' : ''}`}>
+      {isSidebarOpen && <div className="sidebar-backdrop" onClick={() => setIsSidebarOpen(false)} />}
+      <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-brand">
           <div className="brand-badge">
             <Leaf size={18} />

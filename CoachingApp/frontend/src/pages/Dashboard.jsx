@@ -104,46 +104,48 @@ export default function Dashboard() {
           <h2 className="panel-title">Próximas Sesiones</h2>
           <button className="btn btn-secondary" onClick={() => navigate('/agenda')}>Ver Agenda</button>
         </div>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Cliente</th>
-              <th>Fecha y Hora</th>
-              <th>Tema</th>
-              <th>Estado</th>
-              <th>Acción</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.recentSessions.length === 0 ? (
+        <div className="table-wrapper">
+          <table className="data-table">
+            <thead>
               <tr>
-                <td colSpan="5" style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                  No hay sesiones recientes.
-                </td>
+                <th>Cliente</th>
+                <th>Fecha y Hora</th>
+                <th>Tema</th>
+                <th>Estado</th>
+                <th>Acción</th>
               </tr>
-            ) : (
-              data.recentSessions.map(session => (
-                <tr key={session.id}>
-                  <td style={{ fontWeight: 500 }}>{session.clientName}</td>
-                  <td>
-                    {format(parseISO(session.date), "d 'de' MMMM, yyyy", { locale: es })} - {session.time}
-                  </td>
-                  <td>{session.topic || 'Sin definir'}</td>
-                  <td>
-                    <span className={`badge ${session.status}`}>
-                      {session.status === 'pending' ? 'Pendiente' : session.status === 'completed' ? 'Completada' : 'Cancelada'}
-                    </span>
-                  </td>
-                  <td>
-                    <Link to={`/clients/${session.client_id}`} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.75rem' }}>
-                      Ver Ficha
-                    </Link>
+            </thead>
+            <tbody>
+              {data.recentSessions.length === 0 ? (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                    No hay sesiones recientes.
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                data.recentSessions.map(session => (
+                  <tr key={session.id}>
+                    <td style={{ fontWeight: 500 }}>{session.clientName}</td>
+                    <td>
+                      {format(parseISO(session.date), "d 'de' MMMM, yyyy", { locale: es })} - {session.time}
+                    </td>
+                    <td>{session.topic || 'Sin definir'}</td>
+                    <td>
+                      <span className={`badge ${session.status}`}>
+                        {session.status === 'pending' ? 'Pendiente' : session.status === 'completed' ? 'Completada' : 'Cancelada'}
+                      </span>
+                    </td>
+                    <td>
+                      <Link to={`/clients/${session.client_id}`} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.75rem' }}>
+                        Ver Ficha
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
