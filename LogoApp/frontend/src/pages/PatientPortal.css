@@ -1,0 +1,54 @@
+.portal-page {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.portal-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.portal-progress {}
+
+.progress-bar-track {
+  height: 8px;
+  background-color: var(--bg-hover);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+  border-radius: var(--radius-full);
+  transition: width 0.5s ease;
+}
+
+.apt-info-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: var(--bg-hover);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.exercise-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: opacity 0.3s ease, background-color var(--transition);
+}
+
+.exercise-card.done {
+  opacity: 0.65;
+}
+
+.exercise-card.done::after {
+  content: '';
+}
