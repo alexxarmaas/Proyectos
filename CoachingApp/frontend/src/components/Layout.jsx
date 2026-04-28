@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, CalendarDays, LogOut, Activity, Moon, Sun, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users, CalendarDays, LogOut, Activity, Moon, Sun, Menu, X, BarChart, BookOpen } from 'lucide-react';
 
 export default function Layout() {
   const location = useLocation();
@@ -42,25 +42,33 @@ export default function Layout() {
       {/* Sidebar */}
       <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
-          <Activity color="#4f46e5" size={28} />
+          <img src="/logo.png" alt="CoachCRM Logo" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: '50%', backgroundColor: '#fff', border: '2px solid rgba(255,255,255,0.1)' }} />
           CoachCRM
           <button className="mobile-close-btn" onClick={() => setIsSidebarOpen(false)} aria-label="Cerrar menú">
             <X size={20} />
           </button>
         </div>
-        
+
         <nav className="sidebar-nav">
-          <NavLink to="/" end className={({isActive}) => isActive ? 'nav-item active' : 'nav-item'}>
+          <NavLink to="/" end className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
             <LayoutDashboard size={20} />
             Dashboard
           </NavLink>
-          <NavLink to="/clients" className={({isActive}) => isActive ? 'nav-item active' : 'nav-item'}>
+          <NavLink to="/clients" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
             <Users size={20} />
             Mis Clientes
           </NavLink>
-          <NavLink to="/agenda" className={({isActive}) => isActive ? 'nav-item active' : 'nav-item'}>
+          <NavLink to="/agenda" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
             <CalendarDays size={20} />
             Agenda
+          </NavLink>
+          <NavLink to="/finanzas" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+            <BarChart size={20} />
+            Finanzas
+          </NavLink>
+          <NavLink to="/recursos" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+            <BookOpen size={20} />
+            Recursos
           </NavLink>
         </nav>
 
@@ -77,21 +85,21 @@ export default function Layout() {
             <button className="mobile-menu-btn" onClick={() => setIsSidebarOpen(true)} aria-label="Abrir menú">
               <Menu size={20} />
             </button>
-            <div style={{fontWeight: 600, color: 'var(--text-muted)'}}>
-            Panel de Administración
+            <div style={{ fontWeight: 600, color: 'var(--text-muted)' }}>
+              Panel de Administración
             </div>
           </div>
-          <div className="topbar-right" style={{display: 'flex', alignItems: 'center', gap: '16px'}}>
-            <button 
-              onClick={() => setIsDark(!isDark)} 
+          <div className="topbar-right" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <button
+              onClick={() => setIsDark(!isDark)}
               style={{ background: 'transparent', color: 'var(--text-main)' }}
             >
               {isDark ? <Sun size={20} /> : <Moon size={20} />}
             </button>
-            <div style={{width: 36, height: 36, borderRadius: '50%', backgroundColor: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold'}}>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', backgroundColor: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
               CM
             </div>
-            <span className="topbar-user" style={{fontWeight: 500}}>Coach M. Demo</span>
+            <span className="topbar-user" style={{ fontWeight: 500 }}>Coach M. Demo</span>
           </div>
         </header>
 

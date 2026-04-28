@@ -68,6 +68,29 @@ function initializeDatabase() {
       )
     `);
 
+    db.run(`
+      CREATE TABLE IF NOT EXISTS meal_plans (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        patient_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        week_start TEXT NOT NULL,
+        notes TEXT DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (patient_id) REFERENCES patients (id) ON DELETE CASCADE
+      )
+    `);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS meal_plan_slots (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        plan_id INTEGER NOT NULL,
+        day_of_week INTEGER NOT NULL,
+        meal_type TEXT NOT NULL,
+        content TEXT DEFAULT '',
+        FOREIGN KEY (plan_id) REFERENCES meal_plans (id) ON DELETE CASCADE
+      )
+    `);
+
     seedDemoData();
   });
 }
@@ -273,7 +296,67 @@ function seedDemoData() {
                 insertConsultation.run(consultation);
               });
 
-              insertConsultation.finalize();
+              insertConsultation.finalize(() => {
+                // Seed a demo meal plan for the first patient (Marta)
+                const martaId = insertedPatientIds[0];
+                const today = new Date();
+                const dayOfWeek = today.getDay();
+                const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                const monday = new Date(today);
+                monday.setDate(today.getDate() + diff);
+                const weekStart = monday.toISOString().split('T')[0];
+
+                db.run(
+                  `INSERT INTO meal_plans (patient_id, title, week_start, notes) VALUES (?, ?, ?, ?)`,
+                  [martaId, 'Plan Semana Actual', weekStart, 'Plan equilibrado con foco en proteína y saciedad.'],
+                  function onPlan(planErr) {
+                    if (planErr) return;
+                    const planId = this.lastID;
+                    const slots = [
+                      // Lunes
+                      [planId, 0, 'desayuno', 'Yogur griego con fruta y avena'],
+                      [planId, 0, 'almuerzo', 'Ensalada de pollo a la plancha con quinoa'],
+                      [planId, 0, 'cena', 'Merluza al horno con verduras asadas'],
+                      [planId, 0, 'snack', 'Manzana + puñado de almendras'],
+                      // Martes
+                      [planId, 1, 'desayuno', 'Tostada integral con aguacate y huevo'],
+                      [planId, 1, 'almuerzo', 'Lentejas con arroz y ensalada'],
+                      [planId, 1, 'cena', 'Tortilla de verduras + sopa ligera'],
+                      [planId, 1, 'snack', 'Hummus con zanahoria'],
+                      // Miércoles
+                      [planId, 2, 'desayuno', 'Kéfir + fruta de temporada'],
+                      [planId, 2, 'almuerzo', 'Pasta integral con pesto y pollo'],
+                      [planId, 2, 'cena', 'Salmón a la plancha con boniato'],
+                      [planId, 2, 'snack', 'Plátano pequeño antes de entrenar'],
+                      // Jueves
+                      [planId, 3, 'desayuno', 'Porridge de avena con canela'],
+                      [planId, 3, 'almuerzo', 'Arroz con atún y tomate'],
+                      [planId, 3, 'cena', 'Crema de calabaza + huevo cocido'],
+                      [planId, 3, 'snack', 'Queso fresco + nueces'],
+                      // Viernes
+                      [planId, 4, 'desayuno', 'Batido proteico con avena y plátano'],
+                      [planId, 4, 'almuerzo', 'Pollo al curry con arroz basmati'],
+                      [planId, 4, 'cena', 'Pizza integral casera de verduras'],
+                      [planId, 4, 'snack', 'Fruta + yogur 0%'],
+                      // Sábado
+                      [planId, 5, 'desayuno', 'Huevos revueltos con tostada'],
+                      [planId, 5, 'almuerzo', 'Libre (comida social)'],
+                      [planId, 5, 'cena', 'Ensalada ligera + proteína'],
+                      [planId, 5, 'snack', 'Opcional'],
+                      // Domingo
+                      [planId, 6, 'desayuno', 'Brunch: tostadas, huevo, fruta'],
+                      [planId, 6, 'almuerzo', 'Legumbres estofadas (batch cooking)'],
+                      [planId, 6, 'cena', 'Sopa + pan integral'],
+                      [planId, 6, 'snack', 'Infusión + fruta seca'],
+                    ];
+                    const insertSlot = db.prepare(
+                      `INSERT INTO meal_plan_slots (plan_id, day_of_week, meal_type, content) VALUES (?, ?, ?, ?)`
+                    );
+                    slots.forEach((slot) => insertSlot.run(slot));
+                    insertSlot.finalize();
+                  }
+                );
+              });
             });
           });
         }

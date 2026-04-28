@@ -5,6 +5,9 @@ import Dashboard from './pages/Dashboard';
 import Clients from './pages/Clients';
 import ClientProfile from './pages/ClientProfile';
 import Agenda from './pages/Agenda';
+import Finanzas from './pages/Finanzas';
+import Recursos from './pages/Recursos';
+import PublicBooking from './pages/PublicBooking';
 
 function App() {
   const isAuthenticated = !!localStorage.getItem('token');
@@ -13,6 +16,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/booking/:coach" element={<PublicBooking />} />
         
         {/* Protected Routes */}
         <Route path="/" element={isAuthenticated ? <Layout /> : <Navigate to="/login" />}>
@@ -20,6 +24,8 @@ function App() {
           <Route path="clients" element={<Clients />} />
           <Route path="clients/:id" element={<ClientProfile />} />
           <Route path="agenda" element={<Agenda />} />
+          <Route path="finanzas" element={<Finanzas />} />
+          <Route path="recursos" element={<Recursos />} />
         </Route>
       </Routes>
     </BrowserRouter>

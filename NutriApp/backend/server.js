@@ -90,8 +90,9 @@ app.post('/api/auth/login', async (req, res) => {
 app.get('/api/dashboard', async (_req, res) => {
   try {
     const today = formatDate(new Date());
+    const thisMonthStart = today.substring(0, 7) + '-01';
 
-    const [activePatients, upcomingConsultations, recentFollowUps, nextConsultations, monthlyActivity] =
+    const [activePatients, upcomingConsultations, recentFollowUps, nextConsultations, monthlyActivity, plansThisMonth] =
       await Promise.all([
         get(`SELECT COUNT(*) AS total FROM patients WHERE status = 'active'`),
         get(
@@ -122,6 +123,10 @@ app.get('/api/dashboard', async (_req, res) => {
            FROM consultations
            GROUP BY substr(date, 1, 7)
            ORDER BY month ASC`
+        ),
+        get(
+          `SELECT COUNT(*) AS total FROM meal_plans WHERE created_at >= ?`,
+          [thisMonthStart]
         )
       ]);
 
@@ -130,7 +135,8 @@ app.get('/api/dashboard', async (_req, res) => {
       upcomingConsultations: upcomingConsultations.total,
       recentFollowUps,
       nextConsultations,
-      monthlyActivity
+      monthlyActivity,
+      plansCreatedThisMonth: plansThisMonth.total
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -370,6 +376,86 @@ app.put('/api/consultations/:id', async (req, res) => {
 app.delete('/api/consultations/:id', async (req, res) => {
   try {
     const result = await run(`DELETE FROM consultations WHERE id = ?`, [req.params.id]);
+    res.json({ success: true, deleted: result.changes });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- Meal Plans Endpoints ---
+
+app.get('/api/patients/:id/meal-plans', async (req, res) => {
+  try {
+    const plans = await all(
+      `SELECT * FROM meal_plans WHERE patient_id = ? ORDER BY week_start DESC`,
+      [req.params.id]
+    );
+    const plansWithSlots = await Promise.all(
+      plans.map(async (plan) => {
+        const slots = await all(
+          `SELECT * FROM meal_plan_slots WHERE plan_id = ? ORDER BY day_of_week ASC`,
+          [plan.id]
+        );
+        return { ...plan, slots };
+      })
+    );
+    res.json(plansWithSlots);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/meal-plans', async (req, res) => {
+  try {
+    const { patient_id, title, week_start, notes = '', slots = [] } = req.body;
+    if (!patient_id || !title || !week_start) {
+      res.status(400).json({ error: 'Paciente, título y semana son obligatorios' });
+      return;
+    }
+    const result = await run(
+      `INSERT INTO meal_plans (patient_id, title, week_start, notes) VALUES (?, ?, ?, ?)`,
+      [patient_id, title, week_start, notes]
+    );
+    const planId = result.id;
+    for (const slot of slots) {
+      await run(
+        `INSERT INTO meal_plan_slots (plan_id, day_of_week, meal_type, content) VALUES (?, ?, ?, ?)`,
+        [planId, slot.day_of_week, slot.meal_type, slot.content || '']
+      );
+    }
+    const plan = await get(`SELECT * FROM meal_plans WHERE id = ?`, [planId]);
+    const planSlots = await all(`SELECT * FROM meal_plan_slots WHERE plan_id = ?`, [planId]);
+    res.status(201).json({ ...plan, slots: planSlots });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/meal-plans/:id', async (req, res) => {
+  try {
+    const { title, week_start, notes = '', slots = [] } = req.body;
+    await run(
+      `UPDATE meal_plans SET title = ?, week_start = ?, notes = ? WHERE id = ?`,
+      [title, week_start, notes, req.params.id]
+    );
+    await run(`DELETE FROM meal_plan_slots WHERE plan_id = ?`, [req.params.id]);
+    for (const slot of slots) {
+      await run(
+        `INSERT INTO meal_plan_slots (plan_id, day_of_week, meal_type, content) VALUES (?, ?, ?, ?)`,
+        [req.params.id, slot.day_of_week, slot.meal_type, slot.content || '']
+      );
+    }
+    const plan = await get(`SELECT * FROM meal_plans WHERE id = ?`, [req.params.id]);
+    const planSlots = await all(`SELECT * FROM meal_plan_slots WHERE plan_id = ?`, [req.params.id]);
+    res.json({ ...plan, slots: planSlots });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/meal-plans/:id', async (req, res) => {
+  try {
+    const result = await run(`DELETE FROM meal_plans WHERE id = ?`, [req.params.id]);
     res.json({ success: true, deleted: result.changes });
   } catch (error) {
     res.status(500).json({ error: error.message });

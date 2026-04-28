@@ -8,14 +8,18 @@ import {
   Users,
   X,
   Leaf,
-  LogOut
+  LogOut,
+  UtensilsCrossed,
+  BookOpen
 } from 'lucide-react';
 
 const navigation = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/patients', label: 'Pacientes', icon: Users },
   { to: '/agenda', label: 'Agenda', icon: CalendarDays },
-  { to: '/consultations', label: 'Consultas', icon: NotebookText }
+  { to: '/consultations', label: 'Consultas', icon: NotebookText },
+  { to: '/planes', label: 'Planes Alimentarios', icon: UtensilsCrossed },
+  { to: '/recetas', label: 'Recetas', icon: BookOpen },
 ];
 
 export default function Layout() {
@@ -46,12 +50,10 @@ export default function Layout() {
       {isSidebarOpen && <div className="sidebar-backdrop" onClick={() => setIsSidebarOpen(false)} />}
       <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-brand">
-          <div className="brand-badge">
-            <Leaf size={18} />
-          </div>
+          <img src="/logo.png" alt="NutriApp Logo" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: '50%', backgroundColor: '#fff', border: '2px solid rgba(255,255,255,0.1)' }} />
           <div>
-            <strong>NutriApp</strong>
-            <span>Demo MVP para consulta</span>
+            <strong style={{ fontSize: '1.25rem' }}>NutriApp</strong>
+            <span style={{ display: 'block', fontSize: '0.75rem', opacity: 0.8 }}>Demo MVP para consulta</span>
           </div>
           <button className="mobile-close" onClick={() => setIsSidebarOpen(false)}>
             <X size={18} />

@@ -5,6 +5,7 @@ import { Users, CalendarDays, Activity } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { CreditCard, FileText, Plus, UserPlus, Play } from 'lucide-react';
 
 const chartData = [
   { name: 'Ene', sesiones: 4 },
@@ -19,7 +20,9 @@ export default function Dashboard() {
   const [data, setData] = useState({
     activeClientsCount: 0,
     upcomingSessionsCount: 0,
-    recentSessions: []
+    recentSessions: [],
+    totalRevenue: 0,
+    pendingInvoicesCount: 0
   });
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -73,6 +76,48 @@ export default function Dashboard() {
             <h3>Estado</h3>
             <p>Saludable</p>
           </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon" style={{ background: '#ede9fe', color: '#5b21b6' }}>
+            <CreditCard size={24} />
+          </div>
+          <div className="stat-content">
+            <h3>Ingresos del Mes</h3>
+            <p>€{data.totalRevenue?.toFixed(2) || '0.00'}</p>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon" style={{ background: 'var(--amber-soft)', color: '#9a6207' }}>
+            <FileText size={24} />
+          </div>
+          <div className="stat-content">
+            <h3>Facturas Pend.</h3>
+            <p>{data.pendingInvoicesCount || 0}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="panel quick-actions-panel" style={{ marginBottom: '24px' }}>
+        <div className="panel-heading">
+          <h2 className="panel-title">Acciones Rápidas</h2>
+        </div>
+        <div className="quick-actions-grid">
+          <button className="quick-action-card" onClick={() => navigate('/clients')}>
+            <div className="qa-icon blue"><UserPlus size={24} /></div>
+            Nuevo Cliente
+          </button>
+          <button className="quick-action-card" onClick={() => navigate('/agenda')}>
+            <div className="qa-icon green"><Play size={24} /></div>
+            Programar Sesión
+          </button>
+          <button className="quick-action-card" onClick={() => navigate('/finanzas')}>
+            <div className="qa-icon yellow"><CreditCard size={24} /></div>
+            Emitir Factura
+          </button>
+          <button className="quick-action-card" onClick={() => navigate('/recursos')}>
+            <div className="qa-icon" style={{ background: '#ede9fe', color: '#5b21b6' }}><FileText size={24} /></div>
+            Compartir Recurso
+          </button>
         </div>
       </div>
 

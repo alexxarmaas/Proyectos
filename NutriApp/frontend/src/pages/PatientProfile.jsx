@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { CalendarPlus, ChevronLeft, FilePlus2, Pencil, Trash2 } from 'lucide-react';
+import { CalendarPlus, ChevronLeft, FilePlus2, Pencil, Trash2, TrendingDown } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import api from '../lib/api';
 import PatientFormModal from '../components/PatientFormModal';
 import ConsultationFormModal from '../components/ConsultationFormModal';
@@ -164,6 +165,47 @@ export default function PatientProfile() {
             <h3>Historial de consultas y evolución</h3>
           </div>
         </div>
+
+        {/* Weight Evolution Chart */}
+        {(() => {
+          const weightData = [...patient.consultations]
+            .filter((c) => c.weight && c.status === 'completed')
+            .sort((a, b) => a.date.localeCompare(b.date))
+            .map((c) => ({
+              date: format(parseISO(c.date), 'd MMM', { locale: es }),
+              peso: c.weight
+            }));
+          if (weightData.length < 2) return null;
+          const minW = Math.min(...weightData.map(d => d.peso)) - 2;
+          const maxW = Math.max(...weightData.map(d => d.peso)) + 2;
+          return (
+            <div className="weight-chart-shell">
+              <div className="weight-chart-header">
+                <TrendingDown size={16} style={{ color: 'var(--color-green)' }} />
+                <span>Evolución del peso registrado</span>
+              </div>
+              <ResponsiveContainer width="100%" height={180}>
+                <LineChart data={weightData} margin={{ top: 8, right: 20, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="var(--border)" />
+                  <XAxis dataKey="date" stroke="var(--text-muted)" tick={{ fontSize: 12 }} />
+                  <YAxis domain={[minW, maxW]} stroke="var(--text-muted)" tick={{ fontSize: 12 }} unit=" kg" />
+                  <Tooltip
+                    formatter={(v) => [`${v} kg`, 'Peso']}
+                    contentStyle={{ borderRadius: 8, fontSize: '0.85rem' }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="peso"
+                    stroke="#3aa57c"
+                    strokeWidth={2.5}
+                    dot={{ r: 5, fill: '#3aa57c' }}
+                    activeDot={{ r: 7 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          );
+        })()}
 
         {patient.consultations.length === 0 ? (
           <EmptyState

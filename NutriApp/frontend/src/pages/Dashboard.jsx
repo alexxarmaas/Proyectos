@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, CalendarClock, HeartPulse, Users } from 'lucide-react';
+import { Activity, CalendarClock, HeartPulse, Users, UtensilsCrossed, BookOpen, Plus } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -66,6 +66,41 @@ export default function Dashboard() {
           icon={<HeartPulse size={20} />}
           tone="blue"
         />
+        <StatCard
+          title="Planes este mes"
+          value={dashboard.plansCreatedThisMonth ?? 0}
+          hint="Planes alimentarios creados en el mes actual."
+          icon={<UtensilsCrossed size={20} />}
+          tone="purple"
+        />
+      </section>
+
+      {/* Quick Actions */}
+      <section className="panel quick-actions-panel">
+        <div className="panel-heading">
+          <div>
+            <span className="eyebrow">Accesos directos</span>
+            <h3>Acciones rápidas</h3>
+          </div>
+        </div>
+        <div className="quick-actions-grid">
+          <Link to="/patients" className="quick-action-card">
+            <div className="qa-icon green"><Users size={22} /></div>
+            <span>Ver pacientes</span>
+          </Link>
+          <Link to="/agenda" className="quick-action-card">
+            <div className="qa-icon amber"><CalendarClock size={22} /></div>
+            <span>Abrir agenda</span>
+          </Link>
+          <Link to="/planes" className="quick-action-card">
+            <div className="qa-icon blue"><UtensilsCrossed size={22} /></div>
+            <span>Planes alimentarios</span>
+          </Link>
+          <Link to="/recetas" className="quick-action-card">
+            <div className="qa-icon purple"><BookOpen size={22} /></div>
+            <span>Biblioteca de recetas</span>
+          </Link>
+        </div>
       </section>
 
       <section className="content-grid">

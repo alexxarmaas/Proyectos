@@ -29,7 +29,9 @@ app.get('/api/dashboard', (req, res) => {
   const result = {
     activeClientsCount: 0,
     upcomingSessionsCount: 0,
-    recentSessions: []
+    recentSessions: [],
+    totalRevenue: 0,
+    pendingInvoicesCount: 0
   };
 
   db.get("SELECT COUNT(*) as count FROM clients WHERE status = 'active'", (err, row) => {
@@ -38,15 +40,23 @@ app.get('/api/dashboard', (req, res) => {
     db.get("SELECT COUNT(*) as count FROM sessions WHERE status = 'pending'", (err, row2) => {
       if (row2) result.upcomingSessionsCount = row2.count;
 
-      const query = `
-        SELECT s.*, c.name as clientName 
-        FROM sessions s 
-        LEFT JOIN clients c ON s.client_id = c.id
-        ORDER BY date DESC, time DESC LIMIT 5
-      `;
-      db.all(query, (err, rows) => {
-        if (rows) result.recentSessions = rows;
-        res.json(result);
+      db.get("SELECT SUM(amount) as total FROM invoices WHERE status = 'paid'", (err, row3) => {
+        if (row3 && row3.total) result.totalRevenue = row3.total;
+
+        db.get("SELECT COUNT(*) as count FROM invoices WHERE status = 'pending' OR status = 'overdue'", (err, row4) => {
+          if (row4) result.pendingInvoicesCount = row4.count;
+
+          const query = `
+            SELECT s.*, c.name as clientName 
+            FROM sessions s 
+            LEFT JOIN clients c ON s.client_id = c.id
+            ORDER BY date DESC, time DESC LIMIT 5
+          `;
+          db.all(query, (err, rows) => {
+            if (rows) result.recentSessions = rows;
+            res.json(result);
+          });
+        });
       });
     });
   });
@@ -101,7 +111,93 @@ app.delete('/api/clients/:id', (req, res) => {
   });
 });
 
-// --- Sessions Endpoints ---
+// --- Goals Endpoints ---
+
+app.get('/api/goals', (req, res) => {
+  const { client_id } = req.query;
+  let query = 'SELECT * FROM goals';
+  let params = [];
+  if (client_id) {
+    query += ' WHERE client_id = ?';
+    params.push(client_id);
+  }
+  query += ' ORDER BY target_date ASC';
+  
+  db.all(query, params, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+app.post('/api/goals', (req, res) => {
+  const { client_id, title, category, status = 'in_progress', target_date } = req.body;
+  const sql = `INSERT INTO goals (client_id, title, category, status, target_date) VALUES (?, ?, ?, ?, ?)`;
+
+  db.run(sql, [client_id, title, category, status, target_date], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.status(201).json({ id: this.lastID, client_id, title, category, status, target_date });
+  });
+});
+
+app.put('/api/goals/:id', (req, res) => {
+  const { title, category, status, target_date } = req.body;
+  const sql = `UPDATE goals SET title = ?, category = ?, status = ?, target_date = ? WHERE id = ?`;
+
+  db.run(sql, [title, category, status, target_date, req.params.id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, updated: this.changes });
+  });
+});
+
+app.delete('/api/goals/:id', (req, res) => {
+  db.run('DELETE FROM goals WHERE id = ?', [req.params.id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, deleted: this.changes });
+  });
+});
+
+// --- Invoices Endpoints ---
+
+app.get('/api/invoices', (req, res) => {
+  const query = `
+    SELECT i.*, c.name as clientName 
+    FROM invoices i 
+    LEFT JOIN clients c ON i.client_id = c.id
+    ORDER BY issue_date DESC
+  `;
+  db.all(query, (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+app.post('/api/invoices', (req, res) => {
+  const { client_id, amount, concept, status = 'pending', issue_date } = req.body;
+  const sql = `INSERT INTO invoices (client_id, amount, concept, status, issue_date) VALUES (?, ?, ?, ?, ?)`;
+
+  db.run(sql, [client_id, amount, concept, status, issue_date], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.status(201).json({ id: this.lastID, client_id, amount, concept, status, issue_date });
+  });
+});
+
+app.put('/api/invoices/:id', (req, res) => {
+  const { status } = req.body;
+  const sql = `UPDATE invoices SET status = ? WHERE id = ?`;
+
+  db.run(sql, [status, req.params.id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, updated: this.changes });
+  });
+});
+
+app.delete('/api/invoices/:id', (req, res) => {
+  db.run('DELETE FROM invoices WHERE id = ?', [req.params.id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, deleted: this.changes });
+  });
+});
+
 
 app.get('/api/sessions', (req, res) => {
   const query = `
