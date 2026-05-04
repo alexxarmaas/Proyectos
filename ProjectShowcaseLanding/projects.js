@@ -11,7 +11,7 @@ const projects = [
       "Módulos de agenda, finanzas y perfil de cliente",
       "Reserva pública para captar nuevos clientes"
     ],
-    liveUrl: "#",
+    liveUrl: "https://coach-front-nine.vercel.app/",
     codeUrl: "https://github.com/alexxarmaas/Proyectos/tree/main/CoachingApp"
   },
   {
@@ -26,7 +26,7 @@ const projects = [
       "Portal de pacientes con navegación dedicada",
       "Facturación y seguimiento de citas"
     ],
-    liveUrl: "#",
+    liveUrl: "https://logo-front.vercel.app/",
     codeUrl: "https://github.com/alexxarmaas/Proyectos/tree/main/LogoApp"
   },
   {
@@ -41,7 +41,7 @@ const projects = [
       "Módulos de planes y recetas por perfil",
       "Modales de alta productividad para operación diaria"
     ],
-    liveUrl: "#",
+    liveUrl: "https://nutri-front-nine.vercel.app/",
     codeUrl: "https://github.com/alexxarmaas/Proyectos/tree/main/NutriApp"
   }
 ];
