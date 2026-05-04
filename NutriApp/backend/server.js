@@ -387,46 +387,6 @@ async function run(sql, params = []) {
 
   return { id: null, changes: 0 };
 }
-
-function all(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (error, rows) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-
-      resolve(rows);
-    });
-  });
-}
-
-function get(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (error, row) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-
-      resolve(row);
-    });
-  });
-}
-
-function run(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function onRun(error) {
-      if (error) {
-        reject(error);
-        return;
-      }
-
-      resolve({ id: this.lastID, changes: this.changes });
-    });
-  });
-}
-
 function getStartOfWeek(dateString) {
   const today = dateString ? new Date(`${dateString}T00:00:00`) : new Date();
   const day = today.getDay();
@@ -442,6 +402,14 @@ function formatDate(date) {
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, product: 'NutriApp MVP' });
+});
+
+app.get('/', (_req, res) => {
+  res.status(200).json({
+    ok: true,
+    service: 'NutriApp backend',
+    endpoints: ['/api/health', '/api/auth/login']
+  });
 });
 
 app.post('/api/auth/login', async (req, res) => {

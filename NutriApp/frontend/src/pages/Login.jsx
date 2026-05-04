@@ -61,12 +61,12 @@ export default function Login() {
 
           <label>
             Email
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <input autoComplete="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </label>
 
           <label>
             Contraseña
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <input autoComplete="current-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
           </label>
 
           <button type="submit" className="primary-button full-width" disabled={isLoading}>
