@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Activity } from 'lucide-react';
+import { API_BASE_URL } from '../lib/apiBase';
 
 export default function Login() {
   const [email, setEmail] = useState('coach@demo.com');
@@ -16,7 +17,7 @@ export default function Login() {
     setLoading(true);
     
     try {
-      const res = await axios.post('http://localhost:3001/api/auth/login', { email, password });
+      const res = await axios.post(`${API_BASE_URL}/api/auth/login`, { email, password });
       if (res.data.success) {
         localStorage.setItem('token', res.data.token);
         localStorage.setItem('user', JSON.stringify(res.data.user));

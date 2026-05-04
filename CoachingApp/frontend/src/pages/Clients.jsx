@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, X, LayoutGrid, List } from 'lucide-react';
+import { API_BASE_URL } from '../lib/apiBase';
 
 export default function Clients() {
   const [clients, setClients] = useState([]);
@@ -24,7 +25,7 @@ export default function Clients() {
 
   const fetchClients = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/api/clients');
+      const res = await axios.get(`${API_BASE_URL}/api/clients`);
       setClients(res.data);
     } catch (err) {
       console.error(err);
@@ -36,7 +37,7 @@ export default function Clients() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:3001/api/clients', formData);
+      await axios.post(`${API_BASE_URL}/api/clients`, formData);
       setShowModal(false);
       setFormData({ name: '', email: '', phone: '', objective: '', status: 'lead', notes: '' });
       fetchClients();

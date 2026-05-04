@@ -6,6 +6,7 @@ import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { CreditCard, FileText, Plus, UserPlus, Play } from 'lucide-react';
+import { API_BASE_URL } from '../lib/apiBase';
 
 const chartData = [
   { name: 'Ene', sesiones: 4 },
@@ -33,7 +34,7 @@ export default function Dashboard() {
 
   const fetchDashboard = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/api/dashboard');
+      const res = await axios.get(`${API_BASE_URL}/api/dashboard`);
       setData(res.data);
     } catch (err) {
       console.error('Error fetching dashboard', err);

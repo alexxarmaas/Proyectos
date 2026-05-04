@@ -1,7 +1,9 @@
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 
-const dbPath = path.resolve(__dirname, 'database.sqlite');
+const dbPath = process.env.VERCEL === '1'
+  ? '/tmp/nutriapp-database.sqlite'
+  : path.resolve(__dirname, 'database.sqlite');
 const db = new sqlite3.Database(dbPath, (error) => {
   if (error) {
     console.error('Error opening SQLite database:', error.message);

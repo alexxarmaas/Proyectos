@@ -3,6 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { CreditCard, Download, FileText, Plus, CheckCircle2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { API_BASE_URL } from '../lib/apiBase';
 
 export default function Finanzas() {
   const [invoices, setInvoices] = useState([]);
@@ -12,12 +13,12 @@ export default function Finanzas() {
   useEffect(() => {
     // Mock fetching invoices from the API
     // Replace with real fetch: api.get('/invoices') when lib/api.js is available in this app
-    fetch('http://localhost:3001/api/invoices')
+    fetch(`${API_BASE_URL}/api/invoices`)
       .then(res => res.json())
       .then(data => setInvoices(data))
       .catch(console.error);
 
-    fetch('http://localhost:3001/api/clients')
+    fetch(`${API_BASE_URL}/api/clients`)
       .then(res => res.json())
       .then(data => setPatients(data))
       .catch(console.error);
@@ -36,7 +37,7 @@ export default function Finanzas() {
   const chartData = Object.keys(months).map(k => ({ name: k, total: months[k] })).reverse();
 
   const handleStatusChange = (id, newStatus) => {
-    fetch(`http://localhost:3001/api/invoices/${id}`, {
+    fetch(`${API_BASE_URL}/api/invoices/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus })

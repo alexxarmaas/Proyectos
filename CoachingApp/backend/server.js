@@ -7,6 +7,7 @@ app.use(cors());
 app.use(express.json());
 
 const PORT = 3001;
+const isVercel = process.env.VERCEL === '1';
 
 // --- Auth Endpoints ---
 
@@ -239,6 +240,10 @@ app.delete('/api/sessions/:id', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Backend API server running on port ${PORT}`);
-});
+if (!isVercel) {
+  app.listen(PORT, () => {
+    console.log(`Backend API server running on port ${PORT}`);
+  });
+}
+
+module.exports = app;

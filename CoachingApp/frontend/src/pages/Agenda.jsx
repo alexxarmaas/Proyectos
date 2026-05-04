@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { format, parseISO, isFuture, isToday } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { API_BASE_URL } from '../lib/apiBase';
 
 export default function Agenda() {
   const [sessions, setSessions] = useState([]);
@@ -14,7 +15,7 @@ export default function Agenda() {
 
   const fetchSessions = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/api/sessions');
+      const res = await axios.get(`${API_BASE_URL}/api/sessions`);
       setSessions(res.data);
     } catch (err) {
       console.error(err);

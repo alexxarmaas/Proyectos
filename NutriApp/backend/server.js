@@ -4,6 +4,7 @@ const db = require('./db');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3002;
+const isVercel = process.env.VERCEL === '1';
 
 app.use(cors());
 app.use(express.json());
@@ -487,17 +488,21 @@ app.get('/api/agenda/week', async (req, res) => {
   }
 });
 
-const server = app.listen(PORT, () => {
-  console.log(`NutriApp backend running on http://localhost:${PORT}`);
-});
+if (!isVercel) {
+  const server = app.listen(PORT, () => {
+    console.log(`NutriApp backend running on http://localhost:${PORT}`);
+  });
 
-server.on('error', (error) => {
-  if (error.code === 'EADDRINUSE') {
-    console.error(`Port ${PORT} is already in use. Use another port with PORT=<value>.`);
+  server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+      console.error(`Port ${PORT} is already in use. Use another port with PORT=<value>.`);
+      process.exit(1);
+      return;
+    }
+
+    console.error('Failed to start NutriApp backend:', error.message);
     process.exit(1);
-    return;
-  }
+  });
+}
 
-  console.error('Failed to start NutriApp backend:', error.message);
-  process.exit(1);
-});
+module.exports = app;

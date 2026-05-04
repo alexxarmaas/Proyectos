@@ -4,6 +4,7 @@ import axios from 'axios';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ArrowLeft, Edit, Plus, X, Wand2 } from 'lucide-react';
+import { API_BASE_URL } from '../lib/apiBase';
 
 export default function ClientProfile() {
   const { id } = useParams();
@@ -31,11 +32,11 @@ export default function ClientProfile() {
 
   const fetchClient = async () => {
     try {
-      const res = await axios.get(`http://localhost:3001/api/clients/${id}`);
+      const res = await axios.get(`${API_BASE_URL}/api/clients/${id}`);
       setClient(res.data);
       
       try {
-        const goalsRes = await axios.get(`http://localhost:3001/api/goals?client_id=${id}`);
+        const goalsRes = await axios.get(`${API_BASE_URL}/api/goals?client_id=${id}`);
         setGoals(goalsRes.data);
       } catch (err) {
         console.warn("Goals endpoints might not be available yet", err);
@@ -53,7 +54,7 @@ export default function ClientProfile() {
   const handleCreateGoal = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:3001/api/goals', { ...goalForm, client_id: id });
+      await axios.post(`${API_BASE_URL}/api/goals`, { ...goalForm, client_id: id });
       setShowGoalModal(false);
       setGoalForm({ title: '', category: 'General', target_date: '' });
       fetchClient();
@@ -64,7 +65,7 @@ export default function ClientProfile() {
 
   const markGoalStatus = async (id, status) => {
     try {
-      await axios.put(`http://localhost:3001/api/goals/${id}`, { status });
+      await axios.put(`${API_BASE_URL}/api/goals/${id}`, { status });
       fetchClient();
     } catch (err) {
       alert('Error al actualizar hito');
@@ -74,7 +75,7 @@ export default function ClientProfile() {
   const handleCreateSession = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:3001/api/sessions', { ...sessionForm, client_id: id });
+      await axios.post(`${API_BASE_URL}/api/sessions`, { ...sessionForm, client_id: id });
       setShowSessionModal(false);
       setSessionForm({ date: '', time: '', duration: 60, topic: '', notes: '', status: 'pending' });
       fetchClient();
@@ -85,7 +86,7 @@ export default function ClientProfile() {
 
   const markSessionStatus = async (sessionId, currentSess, status) => {
     try {
-      await axios.put(`http://localhost:3001/api/sessions/${sessionId}`, { ...currentSess, status });
+      await axios.put(`${API_BASE_URL}/api/sessions/${sessionId}`, { ...currentSess, status });
       fetchClient();
     } catch (err) {
       alert('Error');
