@@ -479,12 +479,12 @@ app.get('/api/dashboard', async (_req, res) => {
       ]);
 
     res.json({
-      activePatients: activePatients.total,
-      upcomingConsultations: upcomingConsultations.total,
-      recentFollowUps,
-      nextConsultations,
-      monthlyActivity,
-      plansCreatedThisMonth: plansThisMonth.total
+      activePatients: activePatients?.total ?? 0,
+      upcomingConsultations: upcomingConsultations?.total ?? 0,
+      recentFollowUps: recentFollowUps ?? [],
+      nextConsultations: nextConsultations ?? [],
+      monthlyActivity: monthlyActivity ?? [],
+      plansCreatedThisMonth: plansThisMonth?.total ?? 0
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
