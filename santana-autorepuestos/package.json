@@ -1,6 +1,6 @@
 {
   "name": "santana-autorepuestos-preview",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "next": "15.5.0",
+    "next": "15.5.24",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },
