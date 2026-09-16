@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { getBrowserSupabase } from "@/lib/supabase";
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [form, setForm] = useState({ name: "", email: "", password: "", location: "", whatsapp: "", phone: "" });
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -27,7 +29,7 @@ export default function RegisterPage() {
       }
     });
     if (authError) { setError(authError.message); setBusy(false); return; }
-    if (data.session) window.location.href = "/publicar";
+    if (data.session) router.push("/publicar");
     else { setMessage("Cuenta creada. Revisa tu correo para confirmar el acceso."); setBusy(false); }
   }
 
