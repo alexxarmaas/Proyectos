@@ -1,9 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getBrowserSupabase } from "@/lib/supabase";
 
 export function FavoriteButton({ listingId }: { listingId: string }) {
+  const router = useRouter();
   const [favorite, setFavorite] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -22,7 +24,7 @@ export function FavoriteButton({ listingId }: { listingId: string }) {
   async function toggle() {
     const supabase = getBrowserSupabase();
     if (!supabase) return alert("Configura Supabase para usar favoritos.");
-    if (!userId) { window.location.href = "/login?next=" + encodeURIComponent(window.location.pathname); return; }
+    if (!userId) { router.push("/login?next=" + encodeURIComponent(window.location.pathname)); return; }
     if (favorite) await supabase.from("favorites").delete().eq("user_id", userId).eq("listing_id", listingId);
     else await supabase.from("favorites").insert({ user_id: userId, listing_id: listingId });
     setFavorite(!favorite);
