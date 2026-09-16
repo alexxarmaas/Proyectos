@@ -9,8 +9,20 @@ export async function getListings(filters: MarketplaceFilters = {}) {
   if (!supabase) {
     let rows = demoListings.filter((x) => !x.hidden);
     if (filters.q) {
-      const q = filters.q.toLowerCase();
-      rows = rows.filter((x) => [x.title, x.brand, x.model, x.generation, x.engine, x.category, x.description, ...(x.available_parts ?? [])].filter(Boolean).join(" ").toLowerCase().includes(q));
+      const normalize = (value: string) => value
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9.]+/g, " ")
+        .trim();
+      const tokens = normalize(filters.q).split(/\s+/).filter(Boolean);
+      rows = rows.filter((x) => {
+        const haystack = normalize([x.title, x.brand, x.model, x.generation, x.engine, x.category, x.description, ...(x.available_parts ?? [])].filter(Boolean).join(" "));
+        return tokens.every((token) => {
+          const singular = token.length > 4 && token.endsWith("s") ? token.slice(0, -1) : token;
+          return haystack.includes(token) || haystack.includes(singular);
+        });
+      });
     }
     if (filters.type) rows = rows.filter((x) => x.type === filters.type);
     if (filters.brand) rows = rows.filter((x) => x.brand.toLowerCase() === filters.brand?.toLowerCase());
@@ -23,7 +35,7 @@ export async function getListings(filters: MarketplaceFilters = {}) {
   }
 
   let query = supabase.from("listings").select(listingSelect).eq("hidden", false).order("created_at", { ascending: false });
-  if (filters.q) query = query.textSearch("search_vector", filters.q, { config: "simple", type: "websearch" });
+  if (filters.q) query = query.textSearch("search_vector", filters.q, { config: "spanish", type: "websearch" });
   if (filters.type) query = query.eq("type", filters.type);
   if (filters.brand) query = query.eq("brand", filters.brand);
   if (filters.model) query = query.ilike("model", `%${filters.model}%`);

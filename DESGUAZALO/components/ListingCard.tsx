@@ -5,7 +5,7 @@ import type { Listing } from "@/lib/types";
 import { StatusBadge } from "./StatusBadge";
 
 export function ListingCard({ listing }: { listing: Listing }) {
-  const image = listing.listing_images?.sort((a, b) => a.position - b.position)[0]?.public_url;
+  const image = [...(listing.listing_images ?? [])].sort((a, b) => a.position - b.position)[0]?.public_url;
   return (
     <article className="listing-card">
       <Link href={`/pieza/${listing.slug}`} className="listing-image-wrap" aria-label={`Ver ${listing.title}`}>
