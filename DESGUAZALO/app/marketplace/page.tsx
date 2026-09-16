@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ListingCard } from "@/components/ListingCard";
 import { SearchBar } from "@/components/SearchBar";
 import { categories, conditions, popularBrands } from "@/lib/catalog";
@@ -23,7 +24,7 @@ export default async function Marketplace({ searchParams }: { searchParams: Sear
         <aside className="filters">
           <form action="/marketplace">
             {filters.q && <input type="hidden" name="q" value={filters.q} />}
-            <div className="filter-head"><strong>Filtrar</strong><a href="/marketplace">Limpiar</a></div>
+            <div className="filter-head"><strong>Filtrar</strong><Link href="/marketplace">Limpiar</Link></div>
             <label>Tipo<select name="type" defaultValue={filters.type ?? ""}><option value="">Todo</option><option value="part">Pieza</option><option value="vehicle">Vehículo en despiece</option></select></label>
             <label>Marca<select name="brand" defaultValue={filters.brand ?? ""}><option value="">Todas</option>{popularBrands.map((x) => <option key={x}>{x}</option>)}</select></label>
             <label>Modelo<input name="model" defaultValue={filters.model ?? ""} placeholder="Golf, Ibiza, E46…" /></label>
