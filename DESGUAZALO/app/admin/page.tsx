@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getBrowserSupabase } from "@/lib/supabase";
 
@@ -8,23 +9,23 @@ type AdminProfile = { id:string; display_name:string; location:string|null; is_a
 type AdminReport = { id:string; listing_id:string; reason:string; status:string; created_at:string };
 
 export default function AdminPage(){
-  const [allowed,setAllowed]=useState<boolean|null>(null); const [listings,setListings]=useState<AdminListing[]>([]); const [users,setUsers]=useState<AdminProfile[]>([]); const [reports,setReports]=useState<AdminReport[]>([]);
+  const router=useRouter();
   const supabase=getBrowserSupabase();
+  const [allowed,setAllowed]=useState<boolean|null>(()=>supabase?null:false); const [listings,setListings]=useState<AdminListing[]>([]); const [users,setUsers]=useState<AdminProfile[]>([]); const [reports,setReports]=useState<AdminReport[]>([]);
   useEffect(()=>{
-    const client=getBrowserSupabase();
-    if(!client){setAllowed(false);return;}
+    if(!supabase)return;
     void (async()=>{
-      const {data:auth}=await client.auth.getUser();
-      if(!auth.user){window.location.href="/login?next=/admin";return;}
-      const {data:me}=await client.from("profiles").select("is_admin").eq("id",auth.user.id).single();
+      const {data:auth}=await supabase.auth.getUser();
+      if(!auth.user){router.replace("/login?next=/admin");return;}
+      const {data:me}=await supabase.from("profiles").select("is_admin").eq("id",auth.user.id).single();
       if(!me?.is_admin){setAllowed(false);return;}
       setAllowed(true);
-      const [l,u,r]=await Promise.all([client.from("listings").select("id,title,seller_id,status,hidden,created_at").order("created_at",{ascending:false}).limit(100),client.from("profiles").select("id,display_name,location,is_admin,created_at").order("created_at",{ascending:false}).limit(100),client.from("reports").select("id,listing_id,reason,status,created_at").order("created_at",{ascending:false}).limit(100)]);
+      const [l,u,r]=await Promise.all([supabase.from("listings").select("id,title,seller_id,status,hidden,created_at").order("created_at",{ascending:false}).limit(100),supabase.from("profiles").select("id,display_name,location,is_admin,created_at").order("created_at",{ascending:false}).limit(100),supabase.from("reports").select("id,listing_id,reason,status,created_at").order("created_at",{ascending:false}).limit(100)]);
       setListings((l.data??[]) as AdminListing[]);setUsers((u.data??[]) as AdminProfile[]);setReports((r.data??[]) as AdminReport[]);
     })();
-  },[]);
+  },[router,supabase]);
   async function toggleHidden(row:AdminListing){if(!supabase)return;const {error}=await supabase.from("listings").update({hidden:!row.hidden}).eq("id",row.id);if(!error)setListings(prev=>prev.map(x=>x.id===row.id?{...x,hidden:!x.hidden}:x));}
-  async function deleteListing(id:string){if(!supabase||!confirm("Eliminar este contenido de forma permanente?"))return;const {data:images}=await supabase.from("listing_images").select("storage_path").eq("listing_id",id);const paths=(images??[]).map(image=>image.storage_path).filter(Boolean);if(paths.length)await supabase.storage.from("listing-images").remove(paths);const {error}=await supabase.from("listings").delete().eq("id",id);if(!error)setListings(prev=>prev.filter(x=>x.id!==id));}
+  async function deleteListing(id:string){if(!supabase||!confirm("¿Eliminar este contenido de forma permanente?"))return;const {data:images}=await supabase.from("listing_images").select("storage_path").eq("listing_id",id);const paths=(images??[]).map(image=>image.storage_path).filter(Boolean);if(paths.length)await supabase.storage.from("listing-images").remove(paths);const {error}=await supabase.from("listings").delete().eq("id",id);if(!error)setListings(prev=>prev.filter(x=>x.id!==id));}
   async function resolve(id:string){if(!supabase)return;const {error}=await supabase.from("reports").update({status:"resolved",resolved_at:new Date().toISOString()}).eq("id",id);if(!error)setReports(prev=>prev.map(x=>x.id===id?{...x,status:"resolved"}:x));}
   if(allowed===null)return <div className="shell account-page loading-block">Comprobando permisos…</div>;
   if(!allowed)return <div className="shell account-page"><div className="empty-state"><h1>Acceso restringido</h1><p>Esta zona está reservada a administradores.</p></div></div>;
