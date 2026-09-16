@@ -4,8 +4,18 @@ import type { Listing, MarketplaceFilters } from "./types";
 
 const listingSelect = "*, listing_images(public_url, position), seller:profiles!listings_seller_id_fkey(id, display_name, location, phone, whatsapp, avatar_url, created_at)";
 
+function numericFilter(value?: string) {
+  if (!value?.trim()) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 export async function getListings(filters: MarketplaceFilters = {}) {
+  const year = numericFilter(filters.year);
+  const minPrice = numericFilter(filters.minPrice);
+  const maxPrice = numericFilter(filters.maxPrice);
   const supabase = getServerSupabase();
+
   if (!supabase) {
     let rows = demoListings.filter((x) => !x.hidden);
     if (filters.q) {
@@ -27,10 +37,14 @@ export async function getListings(filters: MarketplaceFilters = {}) {
     if (filters.type) rows = rows.filter((x) => x.type === filters.type);
     if (filters.brand) rows = rows.filter((x) => x.brand.toLowerCase() === filters.brand?.toLowerCase());
     if (filters.model) rows = rows.filter((x) => x.model.toLowerCase().includes(filters.model!.toLowerCase()));
+    if (year !== undefined) rows = rows.filter((x) => x.year === year);
     if (filters.category) rows = rows.filter((x) => x.category === filters.category);
     if (filters.location) rows = rows.filter((x) => x.location.toLowerCase().includes(filters.location!.toLowerCase()));
+    if (filters.condition) rows = rows.filter((x) => x.condition === filters.condition);
     if (filters.status) rows = rows.filter((x) => x.status === filters.status);
     else rows = rows.filter((x) => x.status !== "sold");
+    if (minPrice !== undefined) rows = rows.filter((x) => x.price !== null && x.price >= minPrice);
+    if (maxPrice !== undefined) rows = rows.filter((x) => x.price !== null && x.price <= maxPrice);
     return rows.slice(0, filters.limit ?? 40);
   }
 
@@ -39,14 +53,14 @@ export async function getListings(filters: MarketplaceFilters = {}) {
   if (filters.type) query = query.eq("type", filters.type);
   if (filters.brand) query = query.eq("brand", filters.brand);
   if (filters.model) query = query.ilike("model", `%${filters.model}%`);
-  if (filters.year) query = query.eq("year", Number(filters.year));
+  if (year !== undefined) query = query.eq("year", year);
   if (filters.category) query = query.eq("category", filters.category);
   if (filters.location) query = query.ilike("location", `%${filters.location}%`);
   if (filters.condition) query = query.eq("condition", filters.condition);
   if (filters.status) query = query.eq("status", filters.status);
   else query = query.neq("status", "sold");
-  if (filters.minPrice) query = query.gte("price", Number(filters.minPrice));
-  if (filters.maxPrice) query = query.lte("price", Number(filters.maxPrice));
+  if (minPrice !== undefined) query = query.gte("price", minPrice);
+  if (maxPrice !== undefined) query = query.lte("price", maxPrice);
   const { data, error } = await query.limit(filters.limit ?? 40);
   if (error) return [];
   return (data ?? []) as unknown as Listing[];
