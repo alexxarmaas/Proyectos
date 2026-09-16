@@ -32,3 +32,16 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Lint, typecheck, tests and production build
         run: npm run check
+      - name: Live Supabase registration smoke test
+        if: github.event_name == 'push' && github.ref == 'refs/heads/goal/desguazalo-mvp'
+        env:
+          SUPABASE_URL: https://cxxlkzmyeyvjjdeozhvu.supabase.co
+          SUPABASE_KEY: sb_publishable_ydRj4qpy0R_U8bnoN6A-zw_ceBuH_1H
+        run: |
+          EMAIL="ci-$(date +%s)-${RANDOM}@example.com"
+          PASSWORD="$(openssl rand -hex 20)Aa1!"
+          PAYLOAD=$(printf '{"email":"%s","password":"%s","data":{"display_name":"CI Garage","location":"Gran Canaria","whatsapp":"34600000000"}}' "$EMAIL" "$PASSWORD")
+          STATUS=$(curl -sS -o /tmp/signup.json -w "%{http_code}" -X POST "$SUPABASE_URL/auth/v1/signup" -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $SUPABASE_KEY" -H "Content-Type: application/json" --data "$PAYLOAD")
+          test "$STATUS" = "200"
+          grep -q '"user"' /tmp/signup.json
+          echo "AUTH_SMOKE_EMAIL=$EMAIL" >> "$GITHUB_ENV"
