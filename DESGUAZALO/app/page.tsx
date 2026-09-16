@@ -5,9 +5,10 @@ import { categories } from "@/lib/catalog";
 import { getListings } from "@/lib/data";
 
 export default async function Home() {
-  const [recent, vehicles] = await Promise.all([
+  const [recent, vehicles, nearby] = await Promise.all([
     getListings({ limit: 8 }),
-    getListings({ type: "vehicle", limit: 4 })
+    getListings({ type: "vehicle", limit: 4 }),
+    getListings({ location: "Gran Canaria", limit: 4 })
   ]);
 
   return (
@@ -41,6 +42,11 @@ export default async function Home() {
         <div className="section-heading"><div><span className="kicker">DONANTES COMPLETOS</span><h2>Coches en despiece</h2></div><Link href="/marketplace?type=vehicle" className="text-link">Ver coches →</Link></div>
         <div className="listing-grid">{vehicles.map((listing) => <ListingCard key={listing.id} listing={listing} />)}</div>
       </section>
+
+      {nearby.length > 0 && <section className="shell section">
+        <div className="section-heading"><div><span className="kicker">POR TU ZONA</span><h2>Piezas en Gran Canaria</h2></div><Link href="/marketplace?location=Gran%20Canaria" className="text-link">Buscar por ubicación →</Link></div>
+        <div className="listing-grid">{nearby.map((listing) => <ListingCard key={`near-${listing.id}`} listing={listing} />)}</div>
+      </section>}
 
       <section className="sell-cta shell">
         <div><span className="kicker">¿TIENES PIEZAS PARADAS?</span><h2>Hazles sitio en el garaje.</h2><p>Fotos, pieza, coche, precio y ubicación. Publica antes de que se enfríe el motor.</p></div>
