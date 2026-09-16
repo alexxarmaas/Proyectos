@@ -4,6 +4,11 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { getBrowserSupabase } from "@/lib/supabase";
 
+function safeNext(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/cuenta/anuncios";
+  return value;
+}
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,7 +21,7 @@ export default function LoginPage() {
     if (!supabase) { setError("Supabase aún no está configurado en este entorno."); setBusy(false); return; }
     const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
     if (authError) { setError(authError.message); setBusy(false); return; }
-    const next = new URLSearchParams(window.location.search).get("next") || "/cuenta/anuncios";
+    const next = safeNext(new URLSearchParams(window.location.search).get("next"));
     window.location.href = next;
   }
 
