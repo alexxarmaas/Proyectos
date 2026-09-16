@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { categories, conditions, popularBrands } from "@/lib/catalog";
 import { slugify } from "@/lib/format";
@@ -11,6 +12,7 @@ const maxImageBytes = 8 * 1024 * 1024;
 const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export default function PublishPage() {
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [files, setFiles] = useState<File[]>([]);
   const [type, setType] = useState<ListingType>("part");
@@ -20,7 +22,7 @@ export default function PublishPage() {
   const [previews, setPreviews] = useState<string[]>([]);
   const set = (key: keyof typeof form) => (value: string) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  useEffect(() => { const supabase = getBrowserSupabase(); if (!supabase) return; void supabase.auth.getUser().then(({ data }) => { if (!data.user) window.location.href = "/login?next=/publicar"; }); }, []);
+  useEffect(() => { const supabase = getBrowserSupabase(); if (!supabase) return; void supabase.auth.getUser().then(({ data }) => { if (!data.user) router.replace("/login?next=/publicar"); }); }, [router]);
   useEffect(() => () => { previews.forEach((url) => URL.revokeObjectURL(url)); }, [previews]);
 
   function chooseImages(list: FileList | null) {
@@ -50,7 +52,7 @@ export default function PublishPage() {
     const supabase = getBrowserSupabase();
     if (!supabase) { setError("Supabase aún no está configurado."); setBusy(false); return; }
     const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) { window.location.href = "/login?next=/publicar"; return; }
+    if (!auth.user) { router.replace("/login?next=/publicar"); return; }
     const listingId = crypto.randomUUID();
     const uploaded: { path: string; url: string; position: number }[] = [];
     try {
@@ -76,7 +78,7 @@ export default function PublishPage() {
       if (insertError) throw insertError;
       const { error: imageError } = await supabase.from("listing_images").insert(uploaded.map((img) => ({ listing_id: listingId, storage_path: img.path, public_url: img.url, position: img.position })));
       if (imageError) throw imageError;
-      window.location.href = `/pieza/${slug}`;
+      router.push(`/pieza/${slug}`);
     } catch (caught) {
       for (const img of uploaded) await supabase.storage.from("listing-images").remove([img.path]);
       await supabase.from("listings").delete().eq("id", listingId);
