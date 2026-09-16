@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, use, useEffect, useState } from "react";
 import { categories, conditions } from "@/lib/catalog";
 import { getBrowserSupabase } from "@/lib/supabase";
 import type { Listing } from "@/lib/types";
 
 export default function EditListingPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params); const [row,setRow]=useState<Listing|null>(null); const [error,setError]=useState(""); const [saved,setSaved]=useState(false);
-  useEffect(()=>{const supabase=getBrowserSupabase();if(!supabase)return;void(async()=>{const {data:auth}=await supabase.auth.getUser();if(!auth.user){window.location.href=`/login?next=/cuenta/anuncios/${id}/editar`;return;} const {data,error:err}=await supabase.from("listings").select("*").eq("id",id).single(); if(err){setError("No existe el anuncio o no tienes acceso.");return;} if(data.seller_id!==auth.user.id){setError("No tienes permiso para editar este anuncio.");return;} setRow(data as unknown as Listing);})();},[id]);
+  const { id } = use(params); const router=useRouter(); const [row,setRow]=useState<Listing|null>(null); const [error,setError]=useState(""); const [saved,setSaved]=useState(false);
+  useEffect(()=>{const supabase=getBrowserSupabase();if(!supabase)return;void(async()=>{const {data:auth}=await supabase.auth.getUser();if(!auth.user){router.replace(`/login?next=/cuenta/anuncios/${id}/editar`);return;} const {data,error:err}=await supabase.from("listings").select("*").eq("id",id).single(); if(err){setError("No existe el anuncio o no tienes acceso.");return;} if(data.seller_id!==auth.user.id){setError("No tienes permiso para editar este anuncio.");return;} setRow(data as unknown as Listing);})();},[id,router]);
   async function save(e:FormEvent){e.preventDefault();setError("");setSaved(false);const supabase=getBrowserSupabase();if(!supabase||!row)return;const {error:err}=await supabase.from("listings").update({title:row.title,description:row.description,brand:row.brand,model:row.model,generation:row.generation,year:row.year,engine:row.engine,category:row.category,condition:row.condition,price:row.price,location:row.location,mileage:row.mileage,available_parts:row.available_parts,reference_code:row.reference_code,technical_notes:row.technical_notes,updated_at:new Date().toISOString()}).eq("id",id); if(err)setError(err.message);else setSaved(true);}
   if(error&&!row)return <div className="shell account-page"><div className="empty-state"><h1>No se puede editar</h1><p>{error}</p><Link href="/cuenta/anuncios">Volver a mis anuncios</Link></div></div>;
   if(!row)return <div className="shell account-page loading-block">Cargando anuncio…</div>;
