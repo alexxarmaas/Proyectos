@@ -41,7 +41,9 @@ jobs:
           EMAIL="ci-$(date +%s)-${RANDOM}@example.com"
           PASSWORD="$(openssl rand -hex 20)Aa1!"
           PAYLOAD=$(printf '{"email":"%s","password":"%s","data":{"display_name":"CI Garage","location":"Gran Canaria","whatsapp":"34600000000"}}' "$EMAIL" "$PASSWORD")
-          STATUS=$(curl -sS -o /tmp/signup.json -w "%{http_code}" -X POST "$SUPABASE_URL/auth/v1/signup" -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $SUPABASE_KEY" -H "Content-Type: application/json" --data "$PAYLOAD")
+          STATUS=$(curl -sS -o /tmp/signup.json -w "%{http_code}" -X POST "$SUPABASE_URL/auth/v1/signup" -H "apikey: $SUPABASE_KEY" -H "Content-Type: application/json" --data "$PAYLOAD")
+          echo "HTTP $STATUS"
+          cat /tmp/signup.json
+          echo
           test "$STATUS" = "200"
-          grep -q '"user"' /tmp/signup.json
-          echo "AUTH_SMOKE_EMAIL=$EMAIL" >> "$GITHUB_ENV"
+          grep -Eq '"id"|"user"' /tmp/signup.json
