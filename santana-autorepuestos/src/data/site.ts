@@ -13,7 +13,7 @@ export const catalogs = [
   { tag: "CAMPER", title: "Camper & Van", meta: "Equipamiento y accesorios", pages: "61 págs." }
 ];
 
-export const featuredBrands = ["BOSCH", "VALEO", "MANN FILTER", "BREMBO", "NGK", "PHILIPS"];
+export const featuredBrands = ["FRENADO", "ILUMINACIÓN", "FILTRACIÓN", "BATERÍAS", "CAMPER", "4X4"];
 
 export const reviews = [
   {
