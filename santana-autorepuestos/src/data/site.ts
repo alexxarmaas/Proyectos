@@ -17,19 +17,19 @@ export const featuredBrands = ["BOSCH", "VALEO", "MANN FILTER", "BREMBO", "NGK",
 
 export const reviews = [
   {
-    name: "Cliente de Vecindario",
-    role: "Reseña destacada",
-    quote: "Les pasé la matrícula y en nada me dieron justo la pieza que necesitaba. Atención rápida y muy clara.",
+    name: "Valoración en Google",
+    role: "5,0 / 5 · 27 reseñas",
+    quote: "Una valoración local excelente que ayuda a convertir búsquedas en confianza antes de contactar.",
   },
   {
-    name: "Taller local",
-    role: "Canal profesional",
-    quote: "Cuando vas con prisa se nota quién responde bien. Muy cómodos para localizar referencias y cerrar pedidos.",
+    name: "Atención directa",
+    role: "Mostrador + teléfono + WhatsApp",
+    quote: "El cliente puede pasar de la búsqueda a una conversación real sin registros, carritos ni procesos innecesarios.",
   },
   {
-    name: "Usuario camper",
-    role: "Accesorios y equipamiento",
-    quote: "Tenían soluciones que no encontraba en webs genéricas. Se agradece hablar con alguien que te orienta.",
+    name: "Canal profesional",
+    role: "Talleres · empresas · flotas",
+    quote: "Un espacio específico para quienes necesitan referencias, presupuestos y pedidos recurrentes con más agilidad.",
   },
 ] as const;
 
