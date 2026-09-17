@@ -18,8 +18,8 @@ const demoUsers = [
     password: "DesguazaloDemo2026!",
     display_name: "Dani Garage",
     location: "Telde, Gran Canaria",
-    phone: "+34600111222",
-    whatsapp: "34600111222",
+    phone: null,
+    whatsapp: null,
     is_admin: false
   },
   {
@@ -28,7 +28,7 @@ const demoUsers = [
     display_name: "Marta R.",
     location: "Las Palmas de Gran Canaria",
     phone: null,
-    whatsapp: "34610333444",
+    whatsapp: null,
     is_admin: false
   },
   {
@@ -36,8 +36,8 @@ const demoUsers = [
     password: "DesguazaloAdmin2026!",
     display_name: "Javi Parts",
     location: "Vecindario, Gran Canaria",
-    phone: "+34620555666",
-    whatsapp: "34620555666",
+    phone: null,
+    whatsapp: null,
     is_admin: true
   }
 ];
@@ -121,7 +121,7 @@ async function seedMarketplace(ids) {
       id: "a0000000-0000-0000-0000-000000000004", seller_id: dani, type: "vehicle", title: "SEAT Ibiza 6J para despiece",
       slug: "seat-ibiza-6j-despiece-a00004", description: "Golpe trasero. Motor, frontal e interior aprovechables. Documentación de baja.",
       brand: "SEAT", model: "Ibiza", generation: "6J", year: 2011, engine: "1.6 TDI 90 CV", category: null,
-      condition: "Golpe trasero", price: 1500, location: "Telde, Gran Canaria", mileage: 168000,
+      condition: "Usada", price: 1500, location: "Telde, Gran Canaria", mileage: 168000,
       available_parts: ["Motor", "Caja de cambios", "Faros", "Puertas delanteras", "Interior", "Centralita"],
       status: "available", created_at: dateDaysAgo(3), updated_at: dateDaysAgo(3)
     },
