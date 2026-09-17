@@ -306,6 +306,13 @@ body {
 [class*="focus:ring-[#c8ff1a]"]:focus { --tw-ring-color: rgba(182,193,138,.3) !important; }
 article[class*="hover:shadow-[9px_9px_0_#c8ff1a]"]:hover { box-shadow: 9px 9px 0 #c9cbc3 !important; }
 
+/* Keep originally translucent decorative utilities translucent after remapping. */
+[class*="border-[#c8ff1a]/"] { border-color: rgba(182,193,138,.18) !important; }
+[class*="bg-[#c8ff1a]/"] { background-color: rgba(182,193,138,.09) !important; }
+[class*="bg-[#ff5a2f]/"] { background-color: rgba(156,109,93,.045) !important; }
+[class*="bg-[#101214]/"] { background-color: rgba(24,27,25,.94) !important; }
+[class*="bg-[#0b0d0e]/"] { background-color: rgba(20,23,21,.96) !important; }
+
 @media (max-width: 760px) {
   .contact-card { position: static; box-shadow: none !important; }
   .publish-shell { padding-top: 28px; }
