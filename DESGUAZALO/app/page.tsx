@@ -12,16 +12,19 @@ const quickSearches = [
   ["Motor BMW E46", "/marketplace?q=motor+bmw+e46"],
 ] as const;
 
-function SectionHeading({ eyebrow, title, href, linkLabel }: { eyebrow?: string; title: string; href?: string; linkLabel?: string }) {
+function SectionHeading({ index, eyebrow, title, href, linkLabel, inverse = false }: { index: string; eyebrow: string; title: string; href?: string; linkLabel?: string; inverse?: boolean }) {
   return (
-    <div className="mb-7 flex items-end justify-between gap-4 sm:mb-8">
-      <div>
-        {eyebrow && <p className="mb-2 text-xs font-black uppercase tracking-[.14em] text-lime-600">{eyebrow}</p>}
-        <h2 className="text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl">{title}</h2>
+    <div className={`mb-7 flex items-end justify-between gap-4 border-b pb-4 sm:mb-8 ${inverse ? "border-white/15" : "border-zinc-300"}`}>
+      <div className="flex items-end gap-4">
+        <span className={`font-racing text-4xl font-black italic leading-none ${inverse ? "text-[#c8ff1a]" : "text-zinc-300"}`}>{index}</span>
+        <div>
+          <p className={`race-kicker mb-1 text-[10px] ${inverse ? "text-zinc-500" : "text-zinc-500"}`}>{eyebrow}</p>
+          <h2 className={`font-racing text-3xl font-black uppercase italic leading-none tracking-[-0.03em] sm:text-4xl ${inverse ? "text-white" : "text-[#101214]"}`}>{title}</h2>
+        </div>
       </div>
       {href && linkLabel && (
-        <Link href={href} className="hidden items-center gap-1 text-sm font-bold text-slate-600 transition hover:text-slate-950 sm:inline-flex">
-          {linkLabel}<span aria-hidden="true">→</span>
+        <Link href={href} className={`hidden items-center gap-2 font-racing text-sm font-black uppercase italic tracking-[.05em] sm:inline-flex ${inverse ? "text-zinc-400 hover:text-[#c8ff1a]" : "text-zinc-600 hover:text-black"}`}>
+          {linkLabel}<span className="text-[#ff5a2f]">→</span>
         </Link>
       )}
     </div>
@@ -36,104 +39,126 @@ export default async function Home() {
   ]);
 
   return (
-    <div className="bg-slate-50">
-      <section className="relative isolate overflow-hidden bg-slate-950 text-white">
-        <div className="absolute inset-0 -z-20 bg-[radial-gradient(circle_at_20%_10%,rgba(190,242,100,.18),transparent_31%),radial-gradient(circle_at_82%_12%,rgba(51,65,85,.6),transparent_34%),linear-gradient(180deg,#020617_0%,#0f172a_100%)]" />
-        <div className="absolute inset-0 -z-10 opacity-[.07] [background-image:linear-gradient(rgba(255,255,255,.55)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.55)_1px,transparent_1px)] [background-size:52px_52px] [mask-image:linear-gradient(to_bottom,black,transparent_88%)]" />
+    <div className="bg-[#f3f4ef]">
+      <section className="relative isolate overflow-hidden bg-[#0b0d0e] text-white">
+        <div className="race-grid-bg absolute inset-0 -z-30 opacity-70" />
+        <div className="race-noise absolute inset-0 -z-20 opacity-[.08]" />
+        <div className="absolute -right-32 top-8 -z-20 h-[520px] w-[520px] rotate-12 border-[90px] border-[#c8ff1a]/[.055]" />
+        <div className="absolute -left-24 bottom-[-120px] -z-20 h-64 w-[520px] -skew-x-12 bg-[#ff5a2f]/[.055]" />
 
-        <div className="mx-auto max-w-7xl px-4 pb-20 pt-16 sm:px-6 sm:pb-24 sm:pt-20 lg:px-8 lg:pb-28 lg:pt-24">
-          <div className="mx-auto max-w-4xl text-center">
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-xs font-semibold text-slate-300 backdrop-blur">
-              <span className="h-1.5 w-1.5 rounded-full bg-lime-400" />
-              Recambios usados · trato directo
+        <div className="mx-auto max-w-7xl px-4 pb-16 pt-14 sm:px-6 sm:pb-20 sm:pt-20 lg:px-8 lg:pb-24">
+          <div className="grid items-end gap-10 lg:grid-cols-[1.25fr_.75fr] lg:gap-16">
+            <div>
+              <div className="mb-6 flex flex-wrap items-center gap-3">
+                <span className="race-cut-sm bg-[#c8ff1a] px-3 py-1 font-racing text-xs font-black uppercase italic tracking-[.1em] text-black">Used parts / Live stock</span>
+                <span className="race-tech text-[10px] font-bold uppercase text-zinc-600">GC · Marketplace · Direct deal</span>
+              </div>
+              <h1 className="font-racing max-w-5xl text-[clamp(4.2rem,10vw,8.5rem)] font-black uppercase italic leading-[.78] tracking-[-0.055em] text-white">
+                Encuentra.<br />Monta.<br /><span className="text-[#c8ff1a]">Arranca.</span>
+              </h1>
+              <p className="mt-7 max-w-xl text-sm leading-6 text-zinc-400 sm:text-base">
+                Recambios usados y coches en despiece. Busca la referencia, localiza la pieza y habla directamente con quien la tiene.
+              </p>
             </div>
-            <h1 className="text-balance text-4xl font-black leading-[1.03] tracking-[-0.055em] text-white sm:text-5xl lg:text-6xl">
-              Encuentra el recambio exacto para tu coche
-            </h1>
-            <p className="mx-auto mt-5 max-w-2xl text-balance text-base leading-7 text-slate-300 sm:text-lg">
-              Busca por marca, modelo o pieza. Compara anuncios y habla directamente con quien la vende.
-            </p>
+
+            <div className="hidden border-l border-white/10 pl-8 lg:block">
+              <div className="race-kicker mb-5 text-[10px] text-zinc-600">Marketplace status</div>
+              <div className="space-y-0 border-y border-white/10">
+                <div className="grid grid-cols-[72px_1fr] items-center border-b border-white/10 py-4">
+                  <strong className="font-racing text-3xl font-black italic text-[#c8ff1a]">01</strong>
+                  <div><b className="block font-racing text-base uppercase italic">Sin comisiones</b><span className="text-xs text-zinc-600">Trato directo entre particulares</span></div>
+                </div>
+                <div className="grid grid-cols-[72px_1fr] items-center border-b border-white/10 py-4">
+                  <strong className="font-racing text-3xl font-black italic text-white">02</strong>
+                  <div><b className="block font-racing text-base uppercase italic">Stock local</b><span className="text-xs text-zinc-600">Piezas y despieces cerca de ti</span></div>
+                </div>
+                <div className="grid grid-cols-[72px_1fr] items-center py-4">
+                  <strong className="font-racing text-3xl font-black italic text-[#ff5a2f]">03</strong>
+                  <div><b className="block font-racing text-base uppercase italic">Datos útiles</b><span className="text-xs text-zinc-600">Motor, generación, OEM y estado</span></div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="mx-auto mt-9 max-w-5xl sm:mt-11">
-            <HeroSearch />
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-400">
-              <span className="mr-1 font-semibold text-slate-500">Búsquedas populares</span>
-              {quickSearches.map(([label, href]) => (
-                <Link key={href} href={href} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-slate-300 transition hover:border-lime-400/40 hover:bg-lime-400/10 hover:text-lime-200">
-                  {label}
-                </Link>
-              ))}
-            </div>
-          </div>
+          <div className="mt-10 lg:mt-14"><HeroSearch /></div>
 
-          <div className="mx-auto mt-10 grid max-w-3xl grid-cols-3 divide-x divide-white/10 text-center">
-            <div className="px-3"><strong className="block text-sm font-bold text-white">Sin comisiones</strong><span className="mt-1 block text-xs text-slate-500">Acuerdo entre particulares</span></div>
-            <div className="px-3"><strong className="block text-sm font-bold text-white">Búsqueda precisa</strong><span className="mt-1 block text-xs text-slate-500">Marca, modelo y pieza</span></div>
-            <div className="px-3"><strong className="block text-sm font-bold text-white">Publicación rápida</strong><span className="mt-1 block text-xs text-slate-500">Fotos, precio y listo</span></div>
+          <div className="mt-5 flex flex-wrap items-center gap-2 text-xs">
+            <span className="race-kicker mr-2 text-[9px] text-zinc-600">Atajos</span>
+            {quickSearches.map(([label, href]) => (
+              <Link key={href} href={href} className="border-b border-zinc-700 py-1 font-racing font-bold uppercase italic tracking-[.04em] text-zinc-400 transition hover:border-[#c8ff1a] hover:text-white">
+                {label}
+              </Link>
+            ))}
           </div>
         </div>
+
+        <div className="race-divider" />
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-        <SectionHeading eyebrow="Recién publicados" title="Últimos anuncios" href="/marketplace" linkLabel="Ver todos" />
+      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-18 lg:px-8">
+        <SectionHeading index="01" eyebrow="Últimas entradas al stock" title="Recién publicados" href="/marketplace" linkLabel="Ver todo el stock" />
         <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
           {recent.map((listing) => <ListingCard key={listing.id} listing={listing} />)}
         </div>
-        <Link href="/marketplace" className="mt-6 inline-flex text-sm font-bold text-slate-700 sm:hidden">Ver todos los anuncios →</Link>
+        <Link href="/marketplace" className="mt-7 inline-flex font-racing text-sm font-black uppercase italic text-black sm:hidden">Ver todo el stock <span className="ml-2 text-[#ff5a2f]">→</span></Link>
       </section>
 
-      <section className="border-y border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-          <SectionHeading eyebrow="Encuentra más rápido" title="Busca por categoría" />
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {categories.map((category) => (
+      <section className="border-y border-zinc-300 bg-[#e6e8e1]">
+        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-18 lg:px-8">
+          <SectionHeading index="02" eyebrow="Navega por sistema" title="Zonas del coche" />
+          <div className="grid grid-cols-2 gap-px overflow-hidden border border-zinc-400 bg-zinc-400 sm:grid-cols-3 lg:grid-cols-5">
+            {categories.map((category, index) => (
               <Link
                 key={category}
                 href={`/marketplace?category=${encodeURIComponent(category)}`}
-                className="group flex min-h-28 flex-col justify-between rounded-2xl border border-slate-200 bg-slate-50 p-4 transition-all hover:-translate-y-0.5 hover:border-lime-300 hover:bg-white hover:shadow-lg hover:shadow-slate-200/60"
+                className="group relative flex min-h-28 flex-col justify-between bg-[#f3f4ef] p-4 transition hover:bg-[#101214] sm:min-h-32"
               >
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 transition group-hover:bg-lime-50 group-hover:text-lime-700 group-hover:ring-lime-200">
-                  <CategoryIcon category={category} />
-                </span>
-                <span className="mt-5 flex items-end justify-between gap-2">
-                  <strong className="text-sm font-bold text-slate-900">{category}</strong>
-                  <span className="text-sm text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-lime-600">→</span>
-                </span>
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-zinc-500 transition group-hover:text-[#c8ff1a]"><CategoryIcon category={category} /></span>
+                  <span className="font-racing text-[10px] font-black italic text-zinc-400 group-hover:text-zinc-700">{String(index + 1).padStart(2, "0")}</span>
+                </div>
+                <div>
+                  <strong className="font-racing block text-lg font-black uppercase italic leading-none text-[#101214] transition group-hover:text-white">{category}</strong>
+                  <span className="mt-2 block h-[2px] w-8 bg-[#ff5a2f] transition-all group-hover:w-16 group-hover:bg-[#c8ff1a]" />
+                </div>
               </Link>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-        <SectionHeading eyebrow="Vehículos completos" title="Coches en despiece" href="/marketplace?type=vehicle" linkLabel="Ver todos" />
-        <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
-          {vehicles.map((listing) => <ListingCard key={listing.id} listing={listing} />)}
+      <section className="bg-[#101214] text-white">
+        <div className="race-grid-bg mx-auto max-w-[1600px]">
+          <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-18 lg:px-8">
+            <SectionHeading index="03" eyebrow="Donor cars / Complete units" title="Coches en despiece" href="/marketplace?type=vehicle" linkLabel="Ver todos" inverse />
+            <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+              {vehicles.map((listing) => <ListingCard key={listing.id} listing={listing} />)}
+            </div>
+          </div>
         </div>
       </section>
 
       {nearby.length > 0 && (
-        <section className="bg-slate-100/70">
-          <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-            <SectionHeading eyebrow="Cerca de ti" title="Recambios en Gran Canaria" href="/marketplace?location=Gran%20Canaria" linkLabel="Ver anuncios de la isla" />
-            <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
-              {nearby.map((listing) => <ListingCard key={`near-${listing.id}`} listing={listing} />)}
-            </div>
+        <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-18 lg:px-8">
+          <SectionHeading index="04" eyebrow="Stock de la isla" title="Gran Canaria" href="/marketplace?location=Gran%20Canaria" linkLabel="Ver stock local" />
+          <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+            {nearby.map((listing) => <ListingCard key={`near-${listing.id}`} listing={listing} />)}
           </div>
         </section>
       )}
 
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-        <div className="relative overflow-hidden rounded-3xl bg-slate-950 px-6 py-9 text-white shadow-xl shadow-slate-200 sm:px-10 sm:py-11">
-          <div className="absolute right-0 top-0 h-48 w-48 translate-x-16 -translate-y-16 rounded-full bg-lime-400/15 blur-3xl" />
-          <div className="relative flex flex-col gap-7 md:flex-row md:items-center md:justify-between">
-            <div className="max-w-2xl">
-              <p className="mb-2 text-xs font-black uppercase tracking-[.14em] text-lime-400">Vender una pieza</p>
-              <h2 className="text-2xl font-black tracking-[-0.04em] sm:text-3xl">¿Tienes recambios parados en el garaje?</h2>
-              <p className="mt-3 text-sm leading-6 text-slate-400 sm:text-base">Sube las fotos, indica de qué coche sale, fija el precio y empieza a recibir interesados.</p>
+      <section className="border-t border-zinc-300 bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+          <div className="race-cut relative overflow-hidden bg-[#c8ff1a] p-7 text-[#101214] shadow-[10px_10px_0_#101214] sm:p-10">
+            <div className="absolute right-[-20px] top-[-45px] font-racing text-[11rem] font-black italic leading-none text-black/[.055]">D/</div>
+            <div className="relative grid gap-8 md:grid-cols-[1fr_auto] md:items-end">
+              <div>
+                <p className="race-kicker mb-2 text-[10px] text-black/55">Seller lane / 05</p>
+                <h2 className="font-racing max-w-3xl text-4xl font-black uppercase italic leading-[.9] tracking-[-0.04em] sm:text-6xl">¿Tienes piezas cogiendo polvo?</h2>
+                <p className="mt-4 max-w-2xl text-sm font-medium text-black/65 sm:text-base">Fotos, coche de procedencia, precio y zona. Nada de formularios eternos.</p>
+              </div>
+              <Link href="/publicar" className="race-cut-sm inline-flex min-h-12 items-center justify-center bg-[#101214] px-6 font-racing text-base font-black uppercase italic tracking-[.055em] text-white transition hover:bg-[#ff5a2f]">Publicar anuncio →</Link>
             </div>
-            <Link href="/publicar" className="inline-flex shrink-0 items-center justify-center rounded-xl bg-lime-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-lime-300">Publicar anuncio</Link>
           </div>
         </div>
       </section>
