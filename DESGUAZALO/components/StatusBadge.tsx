@@ -7,14 +7,14 @@ const copy: Record<ListingStatus, string> = {
 };
 
 const styles: Record<ListingStatus, string> = {
-  available: "border-[#7ca100] bg-[#dfff75] text-[#243000]",
-  reserved: "border-[#c57d16] bg-[#ffd89a] text-[#5a3300]",
-  sold: "border-zinc-400 bg-zinc-200 text-zinc-700",
+  available: "border-[#9aa67b] bg-[#e5e8d8] text-[#465038]",
+  reserved: "border-[#aa9272] bg-[#eee5d8] text-[#604f3a]",
+  sold: "border-zinc-400 bg-[#e1e2dd] text-zinc-700",
 };
 
 const dots: Record<ListingStatus, string> = {
-  available: "bg-[#537000]",
-  reserved: "bg-[#a45c00]",
+  available: "bg-[#718052]",
+  reserved: "bg-[#8c704d]",
   sold: "bg-zinc-500",
 };
 
