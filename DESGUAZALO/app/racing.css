@@ -1,15 +1,21 @@
 /* DESGUÁZALO — street garage / motorsport layer.
    Imported last so it deliberately overrides the old neutral MVP skin. */
 :root {
-  --race-bg: #0b0d0e;
-  --race-panel: #141719;
-  --race-panel-2: #1b1f21;
-  --race-line: #303638;
-  --race-paper: #f3f4ef;
-  --race-lime: #c8ff1a;
-  --race-orange: #ff5a2f;
-  --race-muted: #8d9699;
-  --race-ink: #101214;
+  --race-bg: #141715;
+  --race-panel: #1b1f1c;
+  --race-panel-2: #222723;
+  --race-panel-3: #282d29;
+  --race-line: #383e39;
+  --race-paper: #f0efe9;
+  --race-paper-2: #e7e5de;
+  --race-lime: #b6c18a;
+  --race-lime-hover: #c5cda6;
+  --race-lime-text: #d1d8b5;
+  --race-orange: #9c6d5d;
+  --race-orange-deep: #81594c;
+  --race-olive: #68714f;
+  --race-muted: #8b918a;
+  --race-ink: #181b19;
 }
 
 ::selection { background: var(--race-lime); color: var(--race-ink); }
@@ -28,13 +34,13 @@ body {
 
 .race-grid-bg {
   background-image:
-    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
   background-size: 34px 34px;
 }
 
 .race-noise {
-  background-image: radial-gradient(rgba(255,255,255,.14) .65px, transparent .65px);
+  background-image: radial-gradient(rgba(255,255,255,.08) .65px, transparent .65px);
   background-size: 7px 7px;
 }
 
@@ -86,7 +92,7 @@ body {
 .race-divider {
   height: 8px;
   background:
-    repeating-linear-gradient(-55deg, var(--race-lime) 0 18px, #111 18px 36px);
+    repeating-linear-gradient(-55deg, var(--race-lime) 0 18px, #202420 18px 36px);
 }
 
 /* Legacy detail / publish pages: keep functionality, give them the same garage language. */
@@ -100,19 +106,19 @@ body {
 
 .detail-page { padding-top: 30px; padding-bottom: 70px; }
 .detail-page .breadcrumbs {
-  color: #6e7473;
+  color: #747a73;
   text-transform: uppercase;
   letter-spacing: .08em;
   font-size: .68rem;
   font-weight: 800;
 }
-.detail-page .breadcrumbs a:hover { color: #111; }
+.detail-page .breadcrumbs a:hover { color: var(--race-ink); }
 
 .gallery { gap: 7px; }
 .gallery-item {
   border-radius: 0 !important;
-  border: 1px solid #b9bdb8;
-  background: #dfe1dc;
+  border: 1px solid #c3c5bd;
+  background: #e3e3dc;
   overflow: hidden;
 }
 .gallery-item:first-child {
@@ -127,13 +133,13 @@ body {
 .admin-table,
 .empty-state {
   border-radius: 0 !important;
-  border: 1px solid #b8bcb7 !important;
-  box-shadow: 7px 7px 0 #d8dbd3 !important;
-  background: #fff !important;
+  border: 1px solid #c4c6bf !important;
+  box-shadow: 7px 7px 0 #dddcd5 !important;
+  background: #fbfbf8 !important;
 }
 
 .contact-card {
-  border-top: 5px solid var(--race-lime) !important;
+  border-top: 4px solid var(--race-lime) !important;
   position: sticky;
   top: 86px;
 }
@@ -159,10 +165,10 @@ body {
 
 .spec-grid {
   border-radius: 0 !important;
-  border: 1px solid #b8bcb7 !important;
-  background: #fff;
+  border: 1px solid #c4c6bf !important;
+  background: #fbfbf8;
 }
-.spec-grid > div { border-color: #d9dcd7 !important; }
+.spec-grid > div { border-color: #ddded8 !important; }
 .spec-grid span {
   text-transform: uppercase;
   letter-spacing: .09em;
@@ -172,17 +178,17 @@ body {
 
 .seller-avatar {
   border-radius: 0 !important;
-  background: #111 !important;
-  color: var(--race-lime) !important;
+  background: var(--race-ink) !important;
+  color: var(--race-lime-text) !important;
   font-family: var(--font-racing), sans-serif;
 }
 
 .safe-note,
 .deal-note {
   border-radius: 0 !important;
-  border: 1px solid #b8bcb7 !important;
-  border-left: 5px solid var(--race-orange) !important;
-  background: #f0f1ec !important;
+  border: 1px solid #c4c6bf !important;
+  border-left: 4px solid var(--race-orange) !important;
+  background: #eeeee8 !important;
 }
 
 .part-tags span,
@@ -203,37 +209,37 @@ body {
 .publish-shell { padding: 46px 0 86px; }
 .publish-head { margin-bottom: 24px; }
 .publish-head h1 { font-size: clamp(2.4rem, 6vw, 4rem); line-height: .9; }
-.publish-head > p { max-width: 680px; color: #666d6b; }
+.publish-head > p { max-width: 680px; color: #6d726c; }
 .steps { gap: 6px; }
 .steps span {
   font-family: var(--font-racing), sans-serif;
   text-transform: uppercase;
   letter-spacing: .08em;
-  border: 1px solid #aeb3ae;
-  background: #e8eae4;
+  border: 1px solid #b9bcb5;
+  background: #e9e8e2;
 }
 .steps .active {
-  background: #111 !important;
-  color: var(--race-lime) !important;
-  border-color: #111 !important;
+  background: var(--race-ink) !important;
+  color: var(--race-lime-text) !important;
+  border-color: var(--race-ink) !important;
 }
 
 .type-toggle button {
   text-align: left;
-  border: 1px solid #b8bcb7 !important;
-  background: #f4f5f0 !important;
+  border: 1px solid #c4c6bf !important;
+  background: #f4f3ee !important;
 }
 .type-toggle button.selected {
-  border: 2px solid #111 !important;
-  background: #fff !important;
-  box-shadow: inset 5px 0 0 var(--race-lime);
+  border: 2px solid var(--race-ink) !important;
+  background: #fbfbf8 !important;
+  box-shadow: inset 4px 0 0 var(--race-lime);
 }
 
 .upload-zone {
-  border: 1px dashed #7e8582 !important;
+  border: 1px dashed #8c928b !important;
   background:
-    linear-gradient(135deg, rgba(200,255,26,.1), transparent 45%),
-    #f4f5f0 !important;
+    linear-gradient(135deg, rgba(182,193,138,.08), transparent 45%),
+    #f4f3ee !important;
 }
 
 .stack-form label {
@@ -248,14 +254,14 @@ body {
   margin-top: 7px;
   text-transform: none;
   letter-spacing: normal;
-  border: 1px solid #aeb3ae !important;
-  background: #fff !important;
+  border: 1px solid #b9bcb5 !important;
+  background: #fbfbf8 !important;
 }
 .stack-form input:focus,
 .stack-form select:focus,
 .stack-form textarea:focus {
-  border-color: #111 !important;
-  outline: 3px solid rgba(200,255,26,.52) !important;
+  border-color: var(--race-ink) !important;
+  outline: 3px solid rgba(182,193,138,.32) !important;
   box-shadow: none !important;
 }
 
@@ -267,10 +273,38 @@ body {
 }
 .button-primary {
   background: var(--race-lime) !important;
-  color: #111 !important;
-  border-color: #111 !important;
+  color: var(--race-ink) !important;
+  border-color: var(--race-ink) !important;
 }
-.button-dark { background: #111 !important; color: #fff !important; }
+.button-primary:hover { background: var(--race-lime-hover) !important; }
+.button-dark { background: var(--race-ink) !important; color: #f4f4ef !important; }
+
+/* Palette harmonisation for the newer Tailwind screens. The first racing pass
+   used fluorescent lime + orange directly in utility classes. Keeping this
+   remap here makes the whole product calmer without losing the garage identity. */
+[class*="bg-[#c8ff1a]"] { background-color: var(--race-lime) !important; }
+[class*="text-[#c8ff1a]"] { color: var(--race-lime-text) !important; }
+[class*="border-[#c8ff1a]"] { border-color: var(--race-lime) !important; }
+[class*="hover:bg-[#dcff6f]"]:hover { background-color: var(--race-lime-hover) !important; }
+[class*="hover:text-[#c8ff1a]"]:hover { color: var(--race-lime-text) !important; }
+[class*="bg-[#ff5a2f]"] { background-color: var(--race-orange) !important; }
+[class*="text-[#ff5a2f]"] { color: var(--race-orange) !important; }
+[class*="hover:bg-[#ff5a2f]"]:hover { background-color: var(--race-orange) !important; }
+[class*="hover:text-[#ff5a2f]"]:hover { color: var(--race-orange) !important; }
+[class*="text-[#7b9000]"] { color: var(--race-olive) !important; }
+[class*="text-[#b64527]"] { color: var(--race-orange-deep) !important; }
+[class*="hover:text-[#b64527]"]:hover { color: var(--race-orange-deep) !important; }
+[class*="text-[#d9ff67]"] { color: #d8dec0 !important; }
+[class*="bg-[#0b0d0e]"] { background-color: var(--race-bg) !important; }
+[class*="bg-[#101214]"] { background-color: var(--race-ink) !important; }
+[class*="bg-[#121516]"] { background-color: var(--race-panel) !important; }
+[class*="bg-[#171a1c]"] { background-color: var(--race-panel-2) !important; }
+[class*="bg-[#1b1f21]"] { background-color: var(--race-panel-3) !important; }
+[class*="bg-[#f3f4ef]"] { background-color: var(--race-paper) !important; }
+[class*="bg-[#e8eae4]"] { background-color: var(--race-paper-2) !important; }
+[class*="focus-within:border-[#c8ff1a]"]:focus-within { border-color: var(--race-lime) !important; }
+[class*="focus:ring-[#c8ff1a]"]:focus { --tw-ring-color: rgba(182,193,138,.3) !important; }
+article[class*="hover:shadow-[9px_9px_0_#c8ff1a]"]:hover { box-shadow: 9px 9px 0 #c9cbc3 !important; }
 
 @media (max-width: 760px) {
   .contact-card { position: static; box-shadow: none !important; }
