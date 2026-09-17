@@ -27,7 +27,9 @@ DESGUÁZALO es un marketplace móvil-first para vender piezas usadas de coche y 
 - **Row Level Security (RLS)**: autorización efectiva en base de datos.
 - **Vercel**: despliegue recomendado.
 
-La aplicación puede arrancar sin Supabase para revisar la interfaz pública: en ese caso usa `lib/demo.ts`. Registro, publicación, favoritos, edición y backoffice necesitan un proyecto Supabase configurado.
+La aplicación puede arrancar sin Supabase para revisar la interfaz pública. Además, si Supabase está configurado pero todavía no existen anuncios reales, las páginas públicas muestran temporalmente `lib/demo.ts`. Esos anuncios llevan la etiqueta **DEMO**, no contienen teléfonos/WhatsApp reales y no permiten favoritos ni reportes. En cuanto existe al menos un anuncio real visible, el marketplace usa únicamente Postgres.
+
+Registro, publicación, favoritos, edición y backoffice necesitan un proyecto Supabase configurado.
 
 ## Estructura
 
@@ -107,6 +109,7 @@ El esquema final incluye:
 - El `next` posterior al login solo acepta rutas internas.
 - Storage limita cada imagen a 8 MB y a JPG/PNG/WEBP.
 - Los helpers con privilegios elevados viven en el esquema `private`, fuera de la API pública.
+- Los anuncios demo públicos no incluyen datos de contacto accionables.
 
 En el proyecto Supabase usado durante el desarrollo, el asesor de seguridad queda sin findings después de aplicar las tres migraciones. Los avisos de rendimiento restantes son únicamente índices sin uso en una base recién creada.
 
@@ -118,7 +121,7 @@ Después de aplicar las migraciones, configurar `SUPABASE_SERVICE_ROLE_KEY` en `
 npm run seed
 ```
 
-El seed crea usuarios de desarrollo y carga piezas, coches para despiece, anuncios disponibles/reservados/vendidos y ejemplos de compatibilidad.
+El seed crea usuarios de desarrollo y carga piezas, coches para despiece, anuncios disponibles/reservados/vendidos y ejemplos de compatibilidad. Los perfiles demo se crean sin teléfono ni WhatsApp para evitar datos de contacto ficticios accionables; se puede añadir un número propio desde **Perfil** cuando se quiera probar ese flujo.
 
 ```text
 Vendedor
@@ -135,15 +138,16 @@ Estas credenciales son exclusivamente de demo/desarrollo. Eliminarlas o cambiarl
 ## Flujo demo recomendado
 
 1. Entrar con el usuario vendedor o registrar uno nuevo.
-2. Abrir **Publicar**.
-3. Subir entre 1 y 5 JPG/PNG/WEBP.
-4. Crear una pieza indicando como mínimo pieza, coche, precio y localización.
-5. Comprobar que aparece en el marketplace.
-6. Buscarla por título, coche o referencia.
-7. Abrir la ficha y comprobar WhatsApp/teléfono.
-8. Guardarla en favoritos desde otro usuario.
-9. Volver a **Mis anuncios** y marcarla reservada o vendida.
-10. Usar una cuenta con `profiles.is_admin = true` para probar moderación y reportes.
+2. Si se va a probar contacto, añadir un WhatsApp/teléfono propio desde **Perfil**.
+3. Abrir **Publicar**.
+4. Subir entre 1 y 5 JPG/PNG/WEBP.
+5. Crear una pieza indicando como mínimo pieza, coche, precio y localización.
+6. Comprobar que aparece en el marketplace.
+7. Buscarla por título, coche o referencia.
+8. Abrir la ficha y comprobar el método de contacto configurado.
+9. Guardarla en favoritos desde otro usuario.
+10. Volver a **Mis anuncios** y marcarla reservada o vendida.
+11. Usar una cuenta con `profiles.is_admin = true` para probar moderación y reportes.
 
 Consultas de referencia del dataset demo:
 
@@ -204,7 +208,7 @@ No reutilizar el proyecto Vercel de otra aplicación del monorepo.
 ## Antes de abrir al público
 
 - Configurar dominio y URLs de Auth definitivos.
-- Ejecutar `npm run seed` solo si se quieren datos demo en el entorno elegido.
+- Ejecutar `npm run seed` solo si se quieren cuentas demo autenticables en el entorno elegido.
 - Cambiar o eliminar las cuentas demo.
 - Probar manualmente registro/login, publicación con imagen, favoritos, edición y cambio de estado en el dominio desplegado.
 - Hacer una pasada visual final en iPhone, Android, tablet y escritorio.
