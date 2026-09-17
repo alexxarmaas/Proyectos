@@ -16,15 +16,16 @@ export default async function Marketplace({ searchParams }: { searchParams: Sear
     q: one(p.q), brand: one(p.brand), model: one(p.model), year: one(p.year), category: one(p.category), minPrice: one(p.minPrice), maxPrice: one(p.maxPrice), location: one(p.location), condition: one(p.condition), status: one(p.status), type: one(p.type)
   };
   const listings = await getListings(filters);
+  const title = filters.q ? `“${filters.q}”` : filters.type === "vehicle" ? "Coches en despiece" : "Piezas usadas";
 
   return (
     <div className="shell market-page">
-      <div className="market-top"><span className="kicker">MARKETPLACE</span><h1>{filters.q ? `Resultados para “${filters.q}”` : filters.type === "vehicle" ? "Coches en despiece" : "Piezas usadas"}</h1><SearchBar defaultValue={filters.q ?? ""} compact /></div>
+      <div className="market-top"><h1>{title}</h1><SearchBar defaultValue={filters.q ?? ""} compact /></div>
       <div className="market-layout">
         <aside className="filters">
           <form action="/marketplace">
             {filters.q && <input type="hidden" name="q" value={filters.q} />}
-            <div className="filter-head"><strong>Filtrar</strong><Link href="/marketplace">Limpiar</Link></div>
+            <div className="filter-head"><strong>Filtros</strong><Link href="/marketplace">Limpiar</Link></div>
             <label>Tipo<select name="type" defaultValue={filters.type ?? ""}><option value="">Todo</option><option value="part">Pieza</option><option value="vehicle">Vehículo en despiece</option></select></label>
             <label>Marca<select name="brand" defaultValue={filters.brand ?? ""}><option value="">Todas</option>{popularBrands.map((x) => <option key={x}>{x}</option>)}</select></label>
             <label>Modelo<input name="model" defaultValue={filters.model ?? ""} placeholder="Golf, Ibiza, E46…" /></label>
@@ -34,12 +35,12 @@ export default async function Marketplace({ searchParams }: { searchParams: Sear
             <label>Ubicación<input name="location" defaultValue={filters.location ?? ""} placeholder="Telde, Madrid…" /></label>
             <label>Estado<select name="condition" defaultValue={filters.condition ?? ""}><option value="">Cualquiera</option>{conditions.map((x) => <option key={x}>{x}</option>)}</select></label>
             <label>Disponibilidad<select name="status" defaultValue={filters.status ?? ""}><option value="">Disponible / reservada</option><option value="available">Disponible</option><option value="reserved">Reservada</option><option value="sold">Vendida</option></select></label>
-            <button className="button button-primary full" type="submit">Aplicar filtros</button>
+            <button className="button button-primary full" type="submit">Aplicar</button>
           </form>
         </aside>
         <section className="market-results">
-          <div className="results-count"><strong>{listings.length}</strong> anuncios encontrados</div>
-          {listings.length ? <div className="listing-grid market-grid">{listings.map((listing) => <ListingCard key={listing.id} listing={listing} />)}</div> : <div className="empty-state"><span>0 resultados</span><h2>No hemos encontrado esa pieza.</h2><p>Prueba quitando algún filtro o buscando por otra referencia del coche.</p></div>}
+          <div className="results-count"><strong>{listings.length}</strong> anuncios</div>
+          {listings.length ? <div className="listing-grid market-grid">{listings.map((listing) => <ListingCard key={listing.id} listing={listing} />)}</div> : <div className="empty-state"><h2>No hay anuncios con esos filtros.</h2><p>Prueba con menos filtros o con otro término de búsqueda.</p></div>}
         </section>
       </div>
     </div>
