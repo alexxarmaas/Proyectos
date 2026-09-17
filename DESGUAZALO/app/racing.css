@@ -42,8 +42,21 @@ body {
   clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
 }
 
+/* Keep small CTAs hard-edged without clipping their text. Some browsers can
+   composite text incorrectly when clip-path is applied directly to inline-flex
+   controls, which made labels disappear on the dark buttons. */
 .race-cut-sm {
-  clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px));
+  clip-path: none;
+  border-radius: 0;
+  position: relative;
+  isolation: isolate;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+.race-cut-sm,
+.race-cut-sm > * {
+  visibility: visible;
 }
 
 .race-slash {
