@@ -1,17 +1,25 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import "./brand.css";
+import "./modern.css";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { MobileNav } from "@/components/MobileNav";
 
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
-  title: { default: "DESGUÁZALO — Piezas usadas, sin vueltas", template: "%s | DESGUÁZALO" },
-  description: "Marketplace de piezas de coche usadas y vehículos para despiece. Encuentra la pieza, habla con el vendedor y cierra el trato directamente.",
+  title: { default: "DESGUÁZALO — Recambios usados y coches en despiece", template: "%s | DESGUÁZALO" },
+  description: "Marketplace de recambios usados y vehículos para despiece. Busca por marca, modelo o pieza y contacta directamente con el vendedor.",
   openGraph: {
     title: "DESGUÁZALO",
-    description: "Encuentra esa pieza que necesitas.",
+    description: "Encuentra el recambio exacto para tu coche.",
     type: "website",
     locale: "es_ES"
   },
@@ -20,10 +28,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="es">
-      <body>
+    <html lang="es" className={inter.variable}>
+      <body className="min-h-screen bg-slate-50 text-slate-900 antialiased">
         <Header />
-        <main>{children}</main>
+        <main className="min-h-[70vh]">{children}</main>
         <Footer />
         <MobileNav />
       </body>
