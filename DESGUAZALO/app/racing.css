@@ -1,0 +1,266 @@
+/* DESGUÁZALO — street garage / motorsport layer.
+   Imported last so it deliberately overrides the old neutral MVP skin. */
+:root {
+  --race-bg: #0b0d0e;
+  --race-panel: #141719;
+  --race-panel-2: #1b1f21;
+  --race-line: #303638;
+  --race-paper: #f3f4ef;
+  --race-lime: #c8ff1a;
+  --race-orange: #ff5a2f;
+  --race-muted: #8d9699;
+  --race-ink: #101214;
+}
+
+::selection { background: var(--race-lime); color: var(--race-ink); }
+
+html { background: var(--race-bg); }
+body {
+  background: var(--race-paper);
+  color: var(--race-ink);
+  font-family: var(--font-inter), Arial, sans-serif;
+}
+
+.font-racing {
+  font-family: var(--font-racing), var(--font-inter), sans-serif;
+  font-stretch: condensed;
+}
+
+.race-grid-bg {
+  background-image:
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+
+.race-noise {
+  background-image: radial-gradient(rgba(255,255,255,.14) .65px, transparent .65px);
+  background-size: 7px 7px;
+}
+
+.race-cut {
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+}
+
+.race-cut-sm {
+  clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px));
+}
+
+.race-slash {
+  position: relative;
+}
+.race-slash::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 -14px;
+  width: 5px;
+  background: var(--race-lime);
+  transform: skewX(-16deg);
+}
+
+.race-kicker {
+  font-family: var(--font-racing), sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .18em;
+  font-weight: 800;
+}
+
+.race-tech {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .045em;
+}
+
+.race-divider {
+  height: 8px;
+  background:
+    repeating-linear-gradient(-55deg, var(--race-lime) 0 18px, #111 18px 36px);
+}
+
+/* Legacy detail / publish pages: keep functionality, give them the same garage language. */
+.detail-page,
+.publish-shell,
+.auth-shell,
+.account-page,
+.admin-page {
+  background: var(--race-paper);
+}
+
+.detail-page { padding-top: 30px; padding-bottom: 70px; }
+.detail-page .breadcrumbs {
+  color: #6e7473;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: .68rem;
+  font-weight: 800;
+}
+.detail-page .breadcrumbs a:hover { color: #111; }
+
+.gallery { gap: 7px; }
+.gallery-item {
+  border-radius: 0 !important;
+  border: 1px solid #b9bdb8;
+  background: #dfe1dc;
+  overflow: hidden;
+}
+.gallery-item:first-child {
+  clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%);
+}
+
+.contact-card,
+.publish-card,
+.auth-card,
+.profile-form,
+.my-listing,
+.admin-table,
+.empty-state {
+  border-radius: 0 !important;
+  border: 1px solid #b8bcb7 !important;
+  box-shadow: 7px 7px 0 #d8dbd3 !important;
+  background: #fff !important;
+}
+
+.contact-card {
+  border-top: 5px solid var(--race-lime) !important;
+  position: sticky;
+  top: 86px;
+}
+
+.contact-card h1,
+.detail-title-mobile h1,
+.publish-head h1,
+.auth-card h1,
+.account-head h1,
+.admin-head h1,
+.detail-section h2 {
+  font-family: var(--font-racing), var(--font-inter), sans-serif;
+  text-transform: uppercase;
+  letter-spacing: -.025em !important;
+}
+
+.detail-price {
+  font-family: var(--font-racing), sans-serif;
+  font-size: clamp(2.4rem, 4vw, 3.3rem) !important;
+  line-height: .95;
+  letter-spacing: -.035em;
+}
+
+.spec-grid {
+  border-radius: 0 !important;
+  border: 1px solid #b8bcb7 !important;
+  background: #fff;
+}
+.spec-grid > div { border-color: #d9dcd7 !important; }
+.spec-grid span {
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  font-size: .64rem !important;
+}
+.spec-grid strong { font-variant-numeric: tabular-nums; }
+
+.seller-avatar {
+  border-radius: 0 !important;
+  background: #111 !important;
+  color: var(--race-lime) !important;
+  font-family: var(--font-racing), sans-serif;
+}
+
+.safe-note,
+.deal-note {
+  border-radius: 0 !important;
+  border: 1px solid #b8bcb7 !important;
+  border-left: 5px solid var(--race-orange) !important;
+  background: #f0f1ec !important;
+}
+
+.part-tags span,
+.steps span,
+.type-toggle button,
+.upload-zone,
+.filters input,
+.filters select,
+.stack-form input,
+.stack-form select,
+.stack-form textarea,
+.profile-form input,
+.profile-form select,
+.profile-form textarea {
+  border-radius: 0 !important;
+}
+
+.publish-shell { padding: 46px 0 86px; }
+.publish-head { margin-bottom: 24px; }
+.publish-head h1 { font-size: clamp(2.4rem, 6vw, 4rem); line-height: .9; }
+.publish-head > p { max-width: 680px; color: #666d6b; }
+.steps { gap: 6px; }
+.steps span {
+  font-family: var(--font-racing), sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  border: 1px solid #aeb3ae;
+  background: #e8eae4;
+}
+.steps .active {
+  background: #111 !important;
+  color: var(--race-lime) !important;
+  border-color: #111 !important;
+}
+
+.type-toggle button {
+  text-align: left;
+  border: 1px solid #b8bcb7 !important;
+  background: #f4f5f0 !important;
+}
+.type-toggle button.selected {
+  border: 2px solid #111 !important;
+  background: #fff !important;
+  box-shadow: inset 5px 0 0 var(--race-lime);
+}
+
+.upload-zone {
+  border: 1px dashed #7e8582 !important;
+  background:
+    linear-gradient(135deg, rgba(200,255,26,.1), transparent 45%),
+    #f4f5f0 !important;
+}
+
+.stack-form label {
+  font-size: .72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+.stack-form input,
+.stack-form select,
+.stack-form textarea {
+  margin-top: 7px;
+  text-transform: none;
+  letter-spacing: normal;
+  border: 1px solid #aeb3ae !important;
+  background: #fff !important;
+}
+.stack-form input:focus,
+.stack-form select:focus,
+.stack-form textarea:focus {
+  border-color: #111 !important;
+  outline: 3px solid rgba(200,255,26,.52) !important;
+  box-shadow: none !important;
+}
+
+.button {
+  border-radius: 0 !important;
+  font-family: var(--font-racing), var(--font-inter), sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .055em;
+}
+.button-primary {
+  background: var(--race-lime) !important;
+  color: #111 !important;
+  border-color: #111 !important;
+}
+.button-dark { background: #111 !important; color: #fff !important; }
+
+@media (max-width: 760px) {
+  .contact-card { position: static; box-shadow: none !important; }
+  .publish-shell { padding-top: 28px; }
+  .publish-head h1 { font-size: 2.7rem; }
+}

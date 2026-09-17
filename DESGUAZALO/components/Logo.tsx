@@ -3,10 +3,10 @@ import Link from "next/link";
 export function Logo({ light = false }: { light?: boolean }) {
   return (
     <Link href="/" className="group inline-flex items-center gap-2.5" aria-label="DESGUÁZALO, inicio">
-      <span className="grid h-9 w-9 place-items-center rounded-xl bg-lime-400 text-sm font-black tracking-[-0.08em] text-slate-950 shadow-sm shadow-lime-950/10 transition-transform group-hover:-rotate-2">
+      <span className="race-cut-sm grid h-9 w-10 place-items-center bg-[#c8ff1a] font-racing text-lg font-black italic tracking-[-0.09em] text-[#101214] transition-transform group-hover:-skew-x-3">
         D/
       </span>
-      <span className={`text-sm font-black tracking-[-0.045em] sm:text-base ${light ? "text-white" : "text-slate-950"}`}>
+      <span className={`font-racing text-[1.28rem] font-black italic uppercase leading-none tracking-[-0.035em] sm:text-[1.45rem] ${light ? "text-white" : "text-[#101214]"}`}>
         DESGUÁZALO
       </span>
     </Link>

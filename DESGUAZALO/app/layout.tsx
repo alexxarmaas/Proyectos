@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Barlow_Condensed, Inter } from "next/font/google";
 import "./globals.css";
 import "./brand.css";
 import "./modern.css";
+import "./racing.css";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { MobileNav } from "@/components/MobileNav";
@@ -11,6 +12,13 @@ const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
   display: "swap",
+});
+
+const racing = Barlow_Condensed({
+  subsets: ["latin"],
+  variable: "--font-racing",
+  display: "swap",
+  weight: ["500", "600", "700", "800", "900"],
 });
 
 export const metadata: Metadata = {
@@ -28,8 +36,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="es" className={inter.variable}>
-      <body className="min-h-screen bg-slate-50 text-slate-900 antialiased">
+    <html lang="es" className={`${inter.variable} ${racing.variable}`}>
+      <body className="min-h-screen bg-[#f3f4ef] text-[#101214] antialiased">
         <Header />
         <main className="min-h-[70vh]">{children}</main>
         <Footer />
