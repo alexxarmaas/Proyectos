@@ -4,6 +4,13 @@ import { SearchBar } from "@/components/SearchBar";
 import { categories } from "@/lib/catalog";
 import { getListings } from "@/lib/data";
 
+const quickSearches = [
+  ["faros golf 7", "/marketplace?q=faros+golf+7"],
+  ["caja polo 1.0 tsi", "/marketplace?q=caja+polo+1.0+tsi"],
+  ["despiece ibiza 6j", "/marketplace?q=despiece+ibiza+6j"],
+  ["motor bmw e46", "/marketplace?q=motor+bmw+e46"]
+] as const;
+
 export default async function Home() {
   const [recent, vehicles, nearby] = await Promise.all([
     getListings({ limit: 8 }),
@@ -13,44 +20,70 @@ export default async function Home() {
 
   return (
     <>
-      <section className="hero">
-        <div className="hero-grid" aria-hidden="true" />
-        <div className="shell hero-content">
-          <div className="eyebrow">PIEZAS REALES · TRATO DIRECTO</div>
-          <h1>Encuentra esa pieza<br /><span>que necesitas.</span></h1>
-          <p>Busca entre piezas usadas y coches en despiece. Sin carrito, sin comisiones, sin rodeos.</p>
+      <section className="home-search">
+        <div className="shell">
+          <div className="home-search-head">
+            <h1>Busca una pieza</h1>
+            <div className="home-search-links">
+              <Link href="/marketplace">Todas las piezas</Link>
+              <Link href="/marketplace?type=vehicle">Coches en despiece</Link>
+            </div>
+          </div>
           <SearchBar />
-          <div className="quick-searches"><span>Prueba:</span><Link href="/marketplace?q=faros+golf+7">faros golf 7</Link><Link href="/marketplace?q=despiece+ibiza+6j">despiece ibiza 6j</Link><Link href="/marketplace?q=motor+bmw+e46">motor bmw e46</Link></div>
-        </div>
-      </section>
-
-      <section className="shell section">
-        <div className="section-heading"><div><span className="kicker">RECIÉN LLEGADO</span><h2>Piezas que acaban de entrar</h2></div><Link href="/marketplace" className="text-link">Ver todo →</Link></div>
-        <div className="listing-grid">{recent.map((listing) => <ListingCard key={listing.id} listing={listing} />)}</div>
-      </section>
-
-      <section className="category-band">
-        <div className="shell section">
-          <div className="section-heading light"><div><span className="kicker">VE AL GRANO</span><h2>Busca por sistema</h2></div></div>
-          <div className="category-grid">
-            {categories.map((category, index) => <Link key={category} href={`/marketplace?category=${encodeURIComponent(category)}`} className="category-tile"><span>{String(index + 1).padStart(2, "0")}</span><strong>{category}</strong><b>→</b></Link>)}
+          <div className="home-search-examples" aria-label="Búsquedas de ejemplo">
+            <span>Ejemplos</span>
+            {quickSearches.map(([label, href]) => <Link href={href} key={href}>{label}</Link>)}
           </div>
         </div>
       </section>
 
-      <section className="shell section">
-        <div className="section-heading"><div><span className="kicker">DONANTES COMPLETOS</span><h2>Coches en despiece</h2></div><Link href="/marketplace?type=vehicle" className="text-link">Ver coches →</Link></div>
+      <section className="shell home-block">
+        <div className="home-block-head">
+          <h2>Últimos anuncios</h2>
+          <Link href="/marketplace">Ver todos</Link>
+        </div>
+        <div className="listing-grid">{recent.map((listing) => <ListingCard key={listing.id} listing={listing} />)}</div>
+      </section>
+
+      <section className="home-categories">
+        <div className="shell">
+          <div className="home-block-head home-block-head-dark">
+            <h2>Categorías</h2>
+          </div>
+          <div className="home-category-list">
+            {categories.map((category) => (
+              <Link key={category} href={`/marketplace?category=${encodeURIComponent(category)}`}>
+                <strong>{category}</strong><span>→</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="shell home-block">
+        <div className="home-block-head">
+          <h2>Coches en despiece</h2>
+          <Link href="/marketplace?type=vehicle">Ver todos</Link>
+        </div>
         <div className="listing-grid">{vehicles.map((listing) => <ListingCard key={listing.id} listing={listing} />)}</div>
       </section>
 
-      {nearby.length > 0 && <section className="shell section">
-        <div className="section-heading"><div><span className="kicker">POR TU ZONA</span><h2>Piezas en Gran Canaria</h2></div><Link href="/marketplace?location=Gran%20Canaria" className="text-link">Buscar por ubicación →</Link></div>
-        <div className="listing-grid">{nearby.map((listing) => <ListingCard key={`near-${listing.id}`} listing={listing} />)}</div>
-      </section>}
+      {nearby.length > 0 && (
+        <section className="shell home-block home-nearby">
+          <div className="home-block-head">
+            <h2>Gran Canaria</h2>
+            <Link href="/marketplace?location=Gran%20Canaria">Ver anuncios de la isla</Link>
+          </div>
+          <div className="listing-grid">{nearby.map((listing) => <ListingCard key={`near-${listing.id}`} listing={listing} />)}</div>
+        </section>
+      )}
 
-      <section className="sell-cta shell">
-        <div><span className="kicker">¿TIENES PIEZAS PARADAS?</span><h2>Hazles sitio en el garaje.</h2><p>Fotos, pieza, coche, precio y ubicación. Publica antes de que se enfríe el motor.</p></div>
-        <Link href="/publicar" className="button button-dark">Publicar una pieza</Link>
+      <section className="shell home-sell-strip">
+        <div>
+          <strong>¿Tienes una pieza para vender?</strong>
+          <span>Publicar un anuncio lleva menos de un minuto.</span>
+        </div>
+        <Link href="/publicar">Publicar anuncio</Link>
       </section>
     </>
   );
