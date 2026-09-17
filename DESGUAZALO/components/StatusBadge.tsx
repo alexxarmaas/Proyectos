@@ -7,21 +7,21 @@ const copy: Record<ListingStatus, string> = {
 };
 
 const styles: Record<ListingStatus, string> = {
-  available: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  reserved: "border-amber-200 bg-amber-50 text-amber-700",
-  sold: "border-slate-200 bg-slate-100 text-slate-600",
+  available: "border-[#7ca100] bg-[#dfff75] text-[#243000]",
+  reserved: "border-[#c57d16] bg-[#ffd89a] text-[#5a3300]",
+  sold: "border-zinc-400 bg-zinc-200 text-zinc-700",
 };
 
 const dots: Record<ListingStatus, string> = {
-  available: "bg-emerald-500",
-  reserved: "bg-amber-500",
-  sold: "bg-slate-400",
+  available: "bg-[#537000]",
+  reserved: "bg-[#a45c00]",
+  sold: "bg-zinc-500",
 };
 
 export function StatusBadge({ status }: { status: ListingStatus }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold ${styles[status]}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${dots[status]}`} />
+    <span className={`race-cut-sm inline-flex items-center gap-1.5 border px-2.5 py-1 font-racing text-[11px] font-black uppercase italic tracking-[.055em] ${styles[status]}`}>
+      <span className={`h-1.5 w-1.5 ${dots[status]}`} />
       {copy[status]}
     </span>
   );
