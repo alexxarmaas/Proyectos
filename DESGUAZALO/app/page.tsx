@@ -20,31 +20,27 @@ export default async function Home() {
 
   return (
     <>
-      <section className="home-intro">
-        <div className="shell home-intro-grid">
-          <div className="home-intro-copy">
-            <div className="home-tag">COMPRA · VENDE · DESPIEZA</div>
-            <h1>Encuentra la pieza.<br />Habla con quien la tiene.</h1>
-            <p>Piezas usadas y coches en despiece. Sin carrito, sin comisión y sin intermediarios.</p>
-          </div>
-
-          <div className="home-search-panel">
-            <div className="home-search-label">¿Qué estás buscando?</div>
-            <SearchBar />
-            <div className="home-search-examples">
-              {quickSearches.map(([label, href]) => <Link href={href} key={href}>{label}</Link>)}
+      <section className="home-search">
+        <div className="shell">
+          <div className="home-search-head">
+            <h1>Busca una pieza</h1>
+            <div className="home-search-links">
+              <Link href="/marketplace">Todas las piezas</Link>
+              <Link href="/marketplace?type=vehicle">Coches en despiece</Link>
             </div>
+          </div>
+          <SearchBar />
+          <div className="home-search-examples" aria-label="Búsquedas de ejemplo">
+            <span>Ejemplos</span>
+            {quickSearches.map(([label, href]) => <Link href={href} key={href}>{label}</Link>)}
           </div>
         </div>
       </section>
 
       <section className="shell home-block">
         <div className="home-block-head">
-          <div>
-            <span>01</span>
-            <h2>Últimos anuncios</h2>
-          </div>
-          <Link href="/marketplace">Ver todos los anuncios</Link>
+          <h2>Últimos anuncios</h2>
+          <Link href="/marketplace">Ver todos</Link>
         </div>
         <div className="listing-grid">{recent.map((listing) => <ListingCard key={listing.id} listing={listing} />)}</div>
       </section>
@@ -52,16 +48,12 @@ export default async function Home() {
       <section className="home-categories">
         <div className="shell">
           <div className="home-block-head home-block-head-dark">
-            <div>
-              <span>02</span>
-              <h2>Buscar por categoría</h2>
-            </div>
-            <p>Ve directamente a lo que necesitas.</p>
+            <h2>Categorías</h2>
           </div>
           <div className="home-category-list">
             {categories.map((category) => (
               <Link key={category} href={`/marketplace?category=${encodeURIComponent(category)}`}>
-                <strong>{category}</strong><span>↗</span>
+                <strong>{category}</strong><span>→</span>
               </Link>
             ))}
           </div>
@@ -70,10 +62,7 @@ export default async function Home() {
 
       <section className="shell home-block">
         <div className="home-block-head">
-          <div>
-            <span>03</span>
-            <h2>Coches en despiece</h2>
-          </div>
+          <h2>Coches en despiece</h2>
           <Link href="/marketplace?type=vehicle">Ver todos</Link>
         </div>
         <div className="listing-grid">{vehicles.map((listing) => <ListingCard key={listing.id} listing={listing} />)}</div>
@@ -82,11 +71,8 @@ export default async function Home() {
       {nearby.length > 0 && (
         <section className="shell home-block home-nearby">
           <div className="home-block-head">
-            <div>
-              <span>04</span>
-              <h2>Gran Canaria</h2>
-            </div>
-            <Link href="/marketplace?location=Gran%20Canaria">Ver por ubicación</Link>
+            <h2>Gran Canaria</h2>
+            <Link href="/marketplace?location=Gran%20Canaria">Ver anuncios de la isla</Link>
           </div>
           <div className="listing-grid">{nearby.map((listing) => <ListingCard key={`near-${listing.id}`} listing={listing} />)}</div>
         </section>
@@ -94,10 +80,10 @@ export default async function Home() {
 
       <section className="shell home-sell-strip">
         <div>
-          <span>¿Tienes una pieza ocupando sitio?</span>
-          <h2>Súbela. Pon precio. Que te escriban.</h2>
+          <strong>¿Tienes una pieza para vender?</strong>
+          <span>Publicar un anuncio lleva menos de un minuto.</span>
         </div>
-        <Link href="/publicar">Publicar anuncio →</Link>
+        <Link href="/publicar">Publicar anuncio</Link>
       </section>
     </>
   );
