@@ -43,6 +43,7 @@ export type Listing = {
   updated_at: string;
   listing_images?: ListingImage[];
   seller?: Seller | null;
+  is_demo?: boolean;
 };
 
 export type MarketplaceFilters = {
