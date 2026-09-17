@@ -37,7 +37,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="es" className={`${inter.variable} ${racing.variable}`}>
-      <body className="min-h-screen bg-[#f3f4ef] text-[#101214] antialiased">
+      <body className="min-h-screen bg-[#f0efe9] text-[#181b19] antialiased">
         <Header />
         <main className="min-h-[70vh]">{children}</main>
         <Footer />
