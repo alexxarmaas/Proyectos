@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { AccountTabs } from "@/components/AccountTabs";
@@ -31,7 +32,7 @@ export default function ProfilePage() {
 
   return <div className="shell account-page"><div className="account-head"><div><span className="kicker">DATOS PÚBLICOS</span><h1>Perfil</h1><p className="muted">Estos datos ayudan a que el comprador sepa con quién está hablando.</p></div></div><AccountTabs active="perfil" /><form className="profile-form stack-form" onSubmit={save}>
     <label>Nombre visible<input required value={form.display_name} onChange={(e)=>setForm({...form,display_name:e.target.value})}/></label>
-    <label>Tipo de vendedor<select value={form.seller_kind} onChange={(e)=>setForm({...form,seller_kind:e.target.value})}><option value="private">Particular</option><option value="professional">Profesional / desguace</option></select></label>
+    <label>Tipo de vendedor<select value={form.seller_kind} onChange={(e)=>setForm({...form,seller_kind:e.target.value})}><option value="private">Particular</option><option value="professional">Profesional / desguace</option></select></label>{form.seller_kind==="professional"&&<div className="pro-inline-note"><span>El modo profesional habilita inventario, lotes, CSV y publicación masiva.</span><Link href="/pro">Abrir Pro →</Link></div>}
     <label>Localización<input required value={form.location} onChange={(e)=>setForm({...form,location:e.target.value})}/></label>
     <div className="two-cols"><label>WhatsApp<input value={form.whatsapp} onChange={(e)=>setForm({...form,whatsapp:e.target.value})}/></label><label>Teléfono<input value={form.phone} onChange={(e)=>setForm({...form,phone:e.target.value})}/></label></div>
     <div className="form-hint">El email de acceso nunca se expone. WhatsApp y teléfono sí se muestran en tus anuncios para permitir trato directo.</div>

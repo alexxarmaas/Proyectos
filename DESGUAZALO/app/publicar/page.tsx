@@ -60,6 +60,7 @@ export default function PublishPage() {
       let defaults: Partial<typeof form> = {};
       try { defaults = JSON.parse(localStorage.getItem("desguazalo:publish-defaults") || "{}"); } catch {}
       const query = new URLSearchParams(window.location.search);
+      if (query.get("type") === "vehicle") setType("vehicle");
       const { data: profile } = await supabase.from("profiles").select("location").eq("id", auth.user.id).single();
       setForm((prev) => ({
         ...prev, ...defaults,
