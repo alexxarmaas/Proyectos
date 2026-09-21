@@ -16,7 +16,7 @@ export function Header() {
     async function sync(userId?: string) {
       setLogged(Boolean(userId));
       if (!userId) { setProfessional(false); return; }
-      const { data } = await client.from("profiles").select("seller_kind").eq("id", userId).single();
+      const { data } = await client!.from("profiles").select("seller_kind").eq("id", userId).single();
       setProfessional(data?.seller_kind === "professional");
     }
 
