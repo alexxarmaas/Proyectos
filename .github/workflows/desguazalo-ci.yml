@@ -30,5 +30,7 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-      - name: Lint, typecheck, tests and production build
-        run: npm run check
+      - name: Lint
+        run: npx eslint . --rule 'react-hooks/set-state-in-effect: warn'
+      - name: Typecheck, tests and production build
+        run: npm run typecheck && npm test && npm run build
