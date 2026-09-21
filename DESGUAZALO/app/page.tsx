@@ -51,7 +51,7 @@ export default function Home() {
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Link
                 href="/marketplace"
-                className="race-cut-sm inline-flex min-h-13 items-center justify-center bg-[var(--dg-accent)] px-6 text-sm font-black uppercase tracking-[.055em] text-[var(--dg-ink)] transition hover:bg-[var(--dg-accent-hover)]"
+                className="dg-cta-safe inline-flex min-h-13 items-center justify-center bg-[var(--dg-accent)] px-6 text-sm font-black uppercase tracking-[.055em] text-[var(--dg-ink)] transition hover:bg-[var(--dg-accent-hover)]"
               >
                 Entrar al marketplace
                 <span className="ml-2 text-lg leading-none">→</span>
@@ -197,7 +197,7 @@ export default function Home() {
                 Sube unas fotos, indica el coche de procedencia, precio y zona. La idea es publicar rápido y que el interesado pueda encontrarte.
               </p>
             </div>
-            <Link href="/publicar" className="race-cut-sm mt-8 inline-flex min-h-13 items-center justify-center bg-[var(--dg-ink)] px-6 text-sm font-black uppercase tracking-[.055em] text-white transition hover:bg-[var(--dg-warm)] lg:mt-0">
+            <Link href="/publicar" className="dg-cta-safe mt-8 inline-flex min-h-13 items-center justify-center bg-[var(--dg-ink)] px-6 text-sm font-black uppercase tracking-[.055em] text-white transition hover:bg-[var(--dg-warm)] lg:mt-0">
               Publicar una pieza
               <span className="ml-2 text-lg">→</span>
             </Link>
@@ -212,7 +212,7 @@ export default function Home() {
             <h2 className="mt-3 max-w-2xl text-4xl font-black uppercase leading-[.95] tracking-[-.045em] sm:text-5xl">Ahora sí: entra al stock.</h2>
             <p className="mt-4 max-w-xl text-base leading-7 text-zinc-600">Cuando ya sabes cómo funciona, el marketplace te lleva directo a las piezas, filtros y despieces disponibles.</p>
           </div>
-          <Link href="/marketplace" className="race-cut-sm inline-flex min-h-13 items-center justify-center bg-[var(--dg-ink)] px-7 text-sm font-black uppercase tracking-[.055em] text-white transition hover:bg-[var(--dg-warm)]">
+          <Link href="/marketplace" className="dg-cta-safe inline-flex min-h-13 items-center justify-center bg-[var(--dg-ink)] px-7 text-sm font-black uppercase tracking-[.055em] text-white transition hover:bg-[var(--dg-warm)]">
             Ir al marketplace
             <span className="ml-2 text-lg">→</span>
           </Link>

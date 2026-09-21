@@ -39,7 +39,7 @@ export function HeroSearch() {
           <input name="q" placeholder="Faro, turbo, caja, llanta…" className={inputClass} />
         </label>
 
-        <button type="submit" className="race-cut-sm flex min-h-16 items-center justify-center gap-2 bg-[var(--dg-accent)] px-7 font-racing text-base font-black uppercase italic tracking-[.055em] text-[var(--dg-ink)] transition hover:bg-[var(--dg-accent-hover)] lg:min-h-0">
+        <button type="submit" className="dg-cta-safe flex min-h-16 items-center justify-center gap-2 bg-[var(--dg-accent)] px-7 font-racing text-base font-black uppercase italic tracking-[.055em] text-[var(--dg-ink)] transition hover:bg-[var(--dg-accent-hover)] lg:min-h-0">
           <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
             <circle cx="11" cy="11" r="7" />
             <path d="m20 20-3.5-3.5" />

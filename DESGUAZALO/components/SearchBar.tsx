@@ -14,7 +14,7 @@ export function SearchBar({ defaultValue = "", compact = false }: { defaultValue
           className={`min-w-0 flex-1 border-0 bg-transparent font-semibold text-zinc-100 outline-none placeholder:text-zinc-600 ${compact ? "py-3.5 text-sm" : "py-4 text-sm sm:text-base"}`}
         />
       </div>
-      <button className="m-1.5 race-cut-sm bg-[var(--dg-accent)] px-5 font-racing text-sm font-black uppercase italic tracking-[.05em] text-[var(--dg-ink)] transition hover:bg-[var(--dg-accent-hover)] sm:px-6" type="submit">Buscar</button>
+      <button className="m-1.5 dg-cta-safe bg-[var(--dg-accent)] px-5 font-racing text-sm font-black uppercase italic tracking-[.05em] text-[var(--dg-ink)] transition hover:bg-[var(--dg-accent-hover)] sm:px-6" type="submit">Buscar</button>
     </form>
   );
 }

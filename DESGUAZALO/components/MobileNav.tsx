@@ -12,7 +12,7 @@ export function MobileNav() {
   const itemClass = "grid place-items-center gap-1 font-racing text-[10px] font-black uppercase italic tracking-[.05em] text-zinc-400 transition active:text-[var(--dg-accent-text)]";
 
   return (
-    <nav className="race-cut-sm fixed inset-x-3 bottom-3 z-50 grid grid-cols-5 items-center border border-white/12 bg-[var(--dg-ink)]/96 px-2 py-2 shadow-[7px_7px_0_rgba(0,0,0,.2)] backdrop-blur-md md:hidden" aria-label="Navegación móvil">
+    <nav className="dg-cta-safe fixed inset-x-3 bottom-3 z-50 grid grid-cols-5 items-center border border-white/12 bg-[var(--dg-ink)]/96 px-2 py-2 shadow-[7px_7px_0_rgba(0,0,0,.2)] backdrop-blur-md md:hidden" aria-label="Navegación móvil">
       <Link href="/" className={itemClass}>
         <Icon path="M3 11.5 12 4l9 7.5M5.5 10v9h13v-9" />
         Inicio
@@ -21,7 +21,7 @@ export function MobileNav() {
         <Icon path="m21 21-4.35-4.35M10.8 18a7.2 7.2 0 1 1 0-14.4 7.2 7.2 0 0 1 0 14.4Z" />
         Buscar
       </Link>
-      <Link href="/publicar" className="race-cut-sm mx-auto grid h-12 w-12 -translate-y-2 place-items-center bg-[var(--dg-accent)] font-racing text-3xl font-black italic leading-none text-[var(--dg-ink)] shadow-[4px_4px_0_var(--dg-dark-soft)]" aria-label="Publicar anuncio">
+      <Link href="/publicar" className="dg-cta-safe mx-auto grid h-12 w-12 -translate-y-2 place-items-center bg-[var(--dg-accent)] font-racing text-3xl font-black italic leading-none text-[var(--dg-ink)] shadow-[4px_4px_0_var(--dg-dark-soft)]" aria-label="Publicar anuncio">
         +
       </Link>
       <Link href="/cuenta/favoritos" className={itemClass}>

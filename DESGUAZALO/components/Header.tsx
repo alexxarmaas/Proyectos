@@ -24,7 +24,7 @@ export function Header() {
       </nav>
       <div className="flex items-center justify-end gap-2">
         <Link href={logged?"/cuenta/anuncios":"/login"} className="hidden border border-white/15 bg-white/[.025] px-3.5 py-2 text-sm font-bold text-zinc-100 transition hover:border-white/30 hover:bg-white/[.055] sm:inline-flex">{logged?"Mi cuenta":"Entrar"}</Link>
-        <Link href="/publicar" className="race-cut-sm inline-flex items-center gap-2 bg-[var(--dg-accent)] px-4 py-2 text-sm font-black uppercase tracking-[.04em] text-[var(--dg-ink)] transition hover:bg-[var(--dg-accent-hover)]"><span aria-hidden>+</span><span>Publicar</span></Link>
+        <Link href="/publicar" className="dg-cta-safe inline-flex items-center gap-2 bg-[var(--dg-accent)] px-4 py-2 text-sm font-black uppercase tracking-[.04em] text-[var(--dg-ink)] transition hover:bg-[var(--dg-accent-hover)]"><span aria-hidden>+</span><span>Publicar</span></Link>
       </div>
     </div>
     <div className="h-[2px] bg-[linear-gradient(90deg,var(--dg-accent)_0_26%,var(--dg-dark-soft)_26%_100%)]" />

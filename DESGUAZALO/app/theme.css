@@ -72,3 +72,35 @@ body{background:var(--dg-bg)!important;color:var(--dg-ink)!important}
 .oem-box code{font-size:1rem;font-weight:900;letter-spacing:.05em}
 .request-cta{margin-top:18px;border:1px dashed var(--dg-accent-strong);background:var(--dg-accent-soft);padding:18px}
 @media(max-width:760px){.trust-grid{grid-template-columns:1fr 1fr}.compact-grid .listing-compact{grid-template-columns:96px minmax(0,1fr)}.compact-grid .listing-compact-price{grid-column:2}.delivery-options{grid-template-columns:1fr}}
+
+
+/* Robust CTA rendering.
+   Avoid the compositing bug seen on some mobile/WebKit builds where labels
+   inside the old race-cut helper rendered as blank dark rectangles. */
+.dg-cta-safe{
+  clip-path:none!important;
+  border-radius:0!important;
+  isolation:auto!important;
+  text-rendering:auto!important;
+  -webkit-font-smoothing:antialiased;
+  -webkit-text-fill-color:currentColor!important;
+  opacity:1!important;
+}
+.dg-cta-safe>*{
+  color:inherit!important;
+  -webkit-text-fill-color:currentColor!important;
+  opacity:1!important;
+}
+button.dg-cta-safe{
+  appearance:none;
+  -webkit-appearance:none;
+  border:0;
+}
+.dg-cta-safe[class*="text-white"]{
+  color:#f7f7f2!important;
+  -webkit-text-fill-color:#f7f7f2!important;
+}
+.dg-cta-safe[class*="text-[var(--dg-ink)]"]{
+  color:var(--dg-ink)!important;
+  -webkit-text-fill-color:var(--dg-ink)!important;
+}
