@@ -30,6 +30,27 @@ export type ListingCompatibility = {
   engine: string | null;
 };
 
+export type OemCompatibilitySuggestion = ListingCompatibility & {
+  occurrences: number;
+};
+
+export type DonorPart = {
+  id: string;
+  vehicle_listing_id: string;
+  seller_id: string;
+  name: string;
+  category: string | null;
+  reference_code: string | null;
+  price: number | null;
+  status: ListingStatus;
+  notes: string | null;
+  published_listing_id: string | null;
+  position: number;
+  created_at: string;
+  updated_at: string;
+  published_listing?: { slug: string; title: string } | null;
+};
+
 export type UserVehicle = {
   id: string;
   user_id: string;
@@ -62,6 +83,7 @@ export type Listing = {
   mileage: number | null;
   available_parts: string[] | null;
   reference_code: string | null;
+  reference_code_normalized?: string | null;
   technical_notes: string | null;
   shipping_available?: boolean;
   pickup_available?: boolean;
@@ -71,6 +93,7 @@ export type Listing = {
   updated_at: string;
   listing_images?: ListingImage[];
   listing_compatibilities?: ListingCompatibility[];
+  donor_parts?: DonorPart[];
   seller?: Seller | null;
   is_demo?: boolean;
 };
@@ -85,12 +108,25 @@ export type PartRequest = {
   year: number | null;
   engine: string | null;
   reference_code: string | null;
+  reference_code_normalized?: string | null;
   location: string;
   notes: string | null;
   status: "open" | "closed";
   created_at: string;
   updated_at: string;
   requester?: Seller | null;
+};
+
+export type RequestMatch = {
+  request_id: string;
+  listing_id: string;
+  score: number;
+  reasons: string[];
+  seen_at: string | null;
+  created_at: string;
+  listing?: Pick<Listing, "id" | "title" | "slug" | "price" | "status" | "reference_code" | "brand" | "model" | "generation" | "year"> & {
+    listing_images?: ListingImage[];
+  };
 };
 
 export type SavedSearch = {

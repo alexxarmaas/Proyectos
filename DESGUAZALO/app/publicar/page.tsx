@@ -6,7 +6,8 @@ import { FormEvent, useEffect, useState } from "react";
 import { categories, conditions, popularBrands } from "@/lib/catalog";
 import { slugify } from "@/lib/format";
 import { getBrowserSupabase } from "@/lib/supabase";
-import type { ListingType } from "@/lib/types";
+import { OemCompatibilityPicker } from "@/components/OemCompatibilityPicker";
+import type { ListingCompatibility, ListingType } from "@/lib/types";
 
 const maxImageBytes = 8 * 1024 * 1024;
 const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -39,6 +40,7 @@ export default function PublishPage() {
   const [type, setType] = useState<ListingType>("part");
   const [form, setForm] = useState({ title:"", brand:"", model:"", generation:"", year:"", engine:"", category:"Motor", condition:"Buen estado", price:"", location:"", description:"", mileage:"", availableParts:"", referenceCode:"", technicalNotes:"", shipping:false, pickup:true });
   const [compat, setCompat] = useState({ brand:"", model:"", generation:"", engine:"", yearFrom:"", yearTo:"" });
+  const [learnedCompat, setLearnedCompat] = useState<ListingCompatibility[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   function set<K extends keyof typeof form>(key: K) { return (value: (typeof form)[K]) => setForm((prev) => ({ ...prev, [key]: value })); }
@@ -62,6 +64,9 @@ export default function PublishPage() {
       setForm((prev) => ({
         ...prev, ...defaults,
         location: query.get("location") || String(defaults.location || profile?.location || ""),
+        title: query.get("title") || String(defaults.title || ""),
+        category: query.get("category") || String(defaults.category || "Motor"),
+        referenceCode: query.get("referenceCode") || String(defaults.referenceCode || ""),
         brand: query.get("brand") || String(defaults.brand || ""),
         model: query.get("model") || String(defaults.model || ""),
         generation: query.get("generation") || String(defaults.generation || ""),
@@ -135,6 +140,20 @@ export default function PublishPage() {
       const { error: imageError } = await supabase.from("listing_images").insert(uploaded.map((img) => ({ listing_id:listingId, storage_path:img.path, public_url:img.url, position:img.position })));
       if (imageError) throw imageError;
 
+      if (type === "vehicle") {
+        const donorNames = form.availableParts.split(",").map((x) => x.trim()).filter(Boolean);
+        if (donorNames.length) {
+          const { error: donorError } = await supabase.from("donor_parts").insert(donorNames.map((name, index) => ({
+            vehicle_listing_id: listingId,
+            seller_id: auth.user!.id,
+            name,
+            status: "available",
+            position: index
+          })));
+          if (donorError) throw donorError;
+        }
+      }
+
       if (type === "part") {
         const compatibility: { listing_id:string; brand:string; model:string; generation:string|null; year_from:number|null; year_to:number|null; engine:string|null }[] = [{
           listing_id:listingId, brand:form.brand.trim(), model:form.model.trim(), generation:form.generation.trim() || null,
@@ -144,8 +163,33 @@ export default function PublishPage() {
           listing_id:listingId, brand:compat.brand.trim(), model:compat.model.trim(), generation:compat.generation.trim() || null,
           year_from:compat.yearFrom ? Number(compat.yearFrom) : null, year_to:compat.yearTo ? Number(compat.yearTo) : null, engine:compat.engine.trim() || null
         });
+        for (const learned of learnedCompat) {
+          const candidate = {
+            listing_id: listingId,
+            brand: learned.brand,
+            model: learned.model,
+            generation: learned.generation,
+            year_from: learned.year_from,
+            year_to: learned.year_to,
+            engine: learned.engine
+          };
+          const duplicate = compatibility.some((item) =>
+            item.brand.toLowerCase() === candidate.brand.toLowerCase() &&
+            item.model.toLowerCase() === candidate.model.toLowerCase() &&
+            (item.generation || "").toLowerCase() === (candidate.generation || "").toLowerCase() &&
+            (item.engine || "").toLowerCase() === (candidate.engine || "").toLowerCase() &&
+            item.year_from === candidate.year_from &&
+            item.year_to === candidate.year_to
+          );
+          if (!duplicate) compatibility.push(candidate);
+        }
         const { error: compatError } = await supabase.from("listing_compatibilities").insert(compatibility);
         if (compatError) throw compatError;
+      }
+
+      const donorPartId = new URLSearchParams(window.location.search).get("donorPartId");
+      if (donorPartId && type === "part") {
+        await supabase.from("donor_parts").update({ published_listing_id: listingId, status: "available" }).eq("id", donorPartId);
       }
 
       localStorage.setItem("desguazalo:publish-defaults", JSON.stringify({ brand:form.brand, model:form.model, generation:form.generation, year:form.year, engine:form.engine, location:form.location }));
@@ -170,9 +214,9 @@ export default function PublishPage() {
         <label>{type === "part" ? "¿Qué pieza es?" : "Título del despiece"}<input required value={form.title} onChange={(e) => set("title")(e.target.value)} placeholder={type === "part" ? "Faro LED delantero derecho" : "SEAT Ibiza 6J para despiece"} maxLength={120} /></label>
         <div className="two-cols"><label>Marca<input list="publish-brands" required value={form.brand} onChange={(e) => set("brand")(e.target.value)} placeholder="Volkswagen" /><datalist id="publish-brands">{popularBrands.map((x) => <option key={x} value={x} />)}</datalist></label><label>Modelo<input required value={form.model} onChange={(e) => set("model")(e.target.value)} placeholder="Golf" /></label></div>
         <div className="three-cols"><label>Generación<input value={form.generation} onChange={(e) => set("generation")(e.target.value)} placeholder="VII / 6J / E46" /></label><label>Año<input inputMode="numeric" value={form.year} onChange={(e) => set("year")(e.target.value)} placeholder="2018" /></label><label>Motor<input value={form.engine} onChange={(e) => set("engine")(e.target.value)} placeholder="1.0 TSI" /></label></div>
-        {type === "part" && <><label>Categoría<select value={form.category} onChange={(e) => set("category")(e.target.value)}>{categories.map((x) => <option key={x}>{x}</option>)}</select></label><label>Referencia OEM <em>muy recomendada</em><input value={form.referenceCode} onChange={(e) => set("referenceCode")(e.target.value)} placeholder="5G1941036" /></label></>}
+        {type === "part" && <><label>Categoría<select value={form.category} onChange={(e) => set("category")(e.target.value)}>{categories.map((x) => <option key={x}>{x}</option>)}</select></label><label>Referencia OEM <em>muy recomendada</em><input value={form.referenceCode} onChange={(e) => set("referenceCode")(e.target.value)} placeholder="5G1941036" /></label><OemCompatibilityPicker reference={form.referenceCode} onChange={setLearnedCompat} /></>}
         <label>Estado<select value={form.condition} onChange={(e) => set("condition")(e.target.value)}>{conditions.map((x) => <option key={x}>{x}</option>)}</select></label>
-        {type === "vehicle" && <><label>Kilometraje<input inputMode="numeric" value={form.mileage} onChange={(e) => set("mileage")(e.target.value)} placeholder="168000" /></label><label>Piezas disponibles<input value={form.availableParts} onChange={(e) => set("availableParts")(e.target.value)} placeholder="Motor, caja, faros, puertas…" /><span className="form-hint">Sepáralas por comas.</span></label></>}
+        {type === "vehicle" && <><label>Kilometraje<input inputMode="numeric" value={form.mileage} onChange={(e) => set("mileage")(e.target.value)} placeholder="168000" /></label><label>Inventario inicial<input value={form.availableParts} onChange={(e) => set("availableParts")(e.target.value)} placeholder="Motor, caja, faros, puertas…" /><span className="form-hint">Sepáralas por comas. Después podrás gestionar cada pieza, su precio y su estado desde el vehículo donante.</span></label></>}
         {type === "part" && <div className="optional-block stack-form"><strong>Compatibilidad adicional <span className="form-hint">opcional</span></strong><p className="form-hint">El coche de procedencia se añade automáticamente. Si sabes que sirve para otro modelo, indícalo aquí.</p><div className="two-cols"><label>Marca<input value={compat.brand} onChange={(e) => setCompat({...compat,brand:e.target.value})} /></label><label>Modelo<input value={compat.model} onChange={(e) => setCompat({...compat,model:e.target.value})} /></label></div><div className="three-cols"><label>Generación<input value={compat.generation} onChange={(e) => setCompat({...compat,generation:e.target.value})} /></label><label>Motor<input value={compat.engine} onChange={(e) => setCompat({...compat,engine:e.target.value})} /></label><label>Años<input value={[compat.yearFrom,compat.yearTo].filter(Boolean).join("–")} readOnly placeholder="Usa los campos de abajo" /></label></div><div className="two-cols"><label>Desde<input inputMode="numeric" value={compat.yearFrom} onChange={(e) => setCompat({...compat,yearFrom:e.target.value})} placeholder="2013" /></label><label>Hasta<input inputMode="numeric" value={compat.yearTo} onChange={(e) => setCompat({...compat,yearTo:e.target.value})} placeholder="2019" /></label></div></div>}
       </section>}
 

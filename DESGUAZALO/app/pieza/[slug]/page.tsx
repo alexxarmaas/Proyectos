@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { DonorInventory } from "@/components/DonorInventory";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { GarageCompatibility } from "@/components/GarageCompatibility";
 import { ReportButton } from "@/components/ReportButton";
 import { CopyReferenceButton, SellerRepeatButton, ShareActions } from "@/components/ShareActions";
 import { StatusBadge } from "@/components/StatusBadge";
-import { getListingBySlug, getListings } from "@/lib/data";
+import { getListingBySlug, getListings, getOemCompatibilityKnowledge } from "@/lib/data";
 import { formatPrice, relativeDate } from "@/lib/format";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -22,9 +23,24 @@ export default async function ListingDetail({ params }: { params: Promise<{ slug
   const { slug } = await params;
   const listing = await getListingBySlug(slug);
   if (!listing) notFound();
-  const related = (await getListings({ brand: listing.brand, limit: 4 })).filter((x) => x.id !== listing.id).slice(0, 3);
+
+  const [relatedRows, oemKnowledge] = await Promise.all([
+    getListings({ brand: listing.brand, limit: 4 }),
+    listing.type === "part" ? getOemCompatibilityKnowledge(listing.reference_code) : Promise.resolve([])
+  ]);
+  const related = relatedRows.filter((x) => x.id !== listing.id).slice(0, 3);
   const images = [...(listing.listing_images ?? [])].sort((a, b) => a.position - b.position);
   const compatibilities = listing.listing_compatibilities ?? [];
+  const donorParts = [...(listing.donor_parts ?? [])].sort((a, b) => a.position - b.position);
+  const learnedOemKnowledge = oemKnowledge.filter((item) => {
+    const alreadyDeclared = compatibilities.some((declared) =>
+      declared.brand.toLowerCase() === item.brand.toLowerCase() &&
+      declared.model.toLowerCase() === item.model.toLowerCase() &&
+      (declared.generation || "").toLowerCase() === (item.generation || "").toLowerCase() &&
+      (declared.engine || "").toLowerCase() === (item.engine || "").toLowerCase()
+    );
+    return Number(item.occurrences) > 1 || !alreadyDeclared;
+  });
   const whatsapp = listing.is_demo ? undefined : listing.seller?.whatsapp?.replace(/\D/g, "");
   const message = encodeURIComponent("Hola, te escribo por tu anuncio “" + listing.title + "” en DESGUÁZALO. ¿Sigue disponible?");
 
@@ -42,7 +58,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ slug
 
           {listing.reference_code && <div className="oem-box"><div><span className="block text-[10px] font-black uppercase tracking-[.1em] text-[var(--dg-muted)]">Referencia OEM</span><code>{listing.reference_code}</code></div><CopyReferenceButton value={listing.reference_code} /></div>}
 
-          <GarageCompatibility brand={listing.brand} model={listing.model} generation={listing.generation} compatibilities={compatibilities} />
+          {listing.type === "part" && <GarageCompatibility brand={listing.brand} model={listing.model} generation={listing.generation} compatibilities={compatibilities} />}
 
           <div className="detail-section"><h2>Descripción</h2><p>{listing.description || "Sin descripción."}</p></div>
 
@@ -61,9 +77,18 @@ export default async function ListingDetail({ params }: { params: Promise<{ slug
             </div>
           </div>
 
+          {listing.type === "vehicle" && <DonorInventory parts={donorParts} fallback={listing.available_parts ?? []} />}
+
           {compatibilities.length > 0 && <div className="detail-section"><h2>Compatibilidad declarada</h2><p className="muted">Úsala como orientación y confirma la referencia OEM antes de cerrar la compra.</p><div className="part-tags">{compatibilities.map((c, i) => <span key={i}>{c.brand} {c.model}{c.generation ? " " + c.generation : ""}{c.engine ? " · " + c.engine : ""}{c.year_from || c.year_to ? " · " + (c.year_from || "…") + "–" + (c.year_to || "…") : ""}</span>)}</div></div>}
+
+          {learnedOemKnowledge.length > 0 && <div className="detail-section oem-knowledge">
+            <span className="kicker">HISTÓRICO OEM</span>
+            <h2>También se ha visto esta referencia en</h2>
+            <p className="muted">Compatibilidades observadas en el histórico de DESGUÁZALO con la misma referencia. No sustituye el catálogo del fabricante.</p>
+            <div className="oem-knowledge-grid">{learnedOemKnowledge.map((item, index) => <div key={index}><strong>{item.brand} {item.model}{item.generation ? " " + item.generation : ""}</strong><span>{[item.engine, item.year_from || item.year_to ? (item.year_from || "…") + "–" + (item.year_to || "…") : null, item.occurrences + " coincidencia" + (item.occurrences === 1 ? "" : "s")].filter(Boolean).join(" · ")}</span></div>)}</div>
+          </div>}
+
           {listing.technical_notes && <div className="detail-section"><h2>Datos técnicos</h2><p>{listing.technical_notes}</p></div>}
-          {listing.available_parts?.length ? <div className="detail-section"><h2>Piezas disponibles</h2><div className="part-tags">{listing.available_parts.map((part) => <span key={part}>{part}</span>)}</div></div> : null}
 
           <div className="safe-note"><strong>Antes de comprar</strong><p>Comprueba referencia OEM, conectores, lado y versión. DESGUÁZALO no procesa pagos ni envíos.</p></div>
         </section>

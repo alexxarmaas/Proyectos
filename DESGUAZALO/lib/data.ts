@@ -1,13 +1,17 @@
 import { demoListings } from "./demo";
 import { getServerSupabase } from "./supabase";
-import type { Listing, MarketplaceFilters, PartRequest } from "./types";
+import type { Listing, MarketplaceFilters, OemCompatibilitySuggestion, PartRequest } from "./types";
 
-const listingSelect = "*, listing_images(public_url, position), listing_compatibilities(id, brand, model, generation, year_from, year_to, engine), seller:profiles!listings_seller_id_fkey(id, display_name, location, phone, whatsapp, avatar_url, seller_kind, created_at, last_active_at)";
+const listingSelect = "*, listing_images(public_url, position), listing_compatibilities(id, brand, model, generation, year_from, year_to, engine), donor_parts!donor_parts_vehicle_listing_id_fkey(id, vehicle_listing_id, seller_id, name, category, reference_code, price, status, notes, published_listing_id, position, created_at, updated_at, published_listing:listings!donor_parts_published_listing_id_fkey(slug, title)), seller:profiles!listings_seller_id_fkey(id, display_name, location, phone, whatsapp, avatar_url, seller_kind, created_at, last_active_at)";
 
 function numericFilter(value?: string) {
   if (!value?.trim()) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function normalizeReference(value?: string) {
+  return (value ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 function filterDemoListings(filters: MarketplaceFilters = {}) {
@@ -27,7 +31,10 @@ function filterDemoListings(filters: MarketplaceFilters = {}) {
       });
     });
   }
-  if (filters.oem) rows = rows.filter((x) => (x.reference_code ?? "").toLowerCase().includes(filters.oem!.toLowerCase()));
+  if (filters.oem) {
+    const wanted = normalizeReference(filters.oem);
+    rows = rows.filter((x) => normalizeReference(x.reference_code ?? "").includes(wanted));
+  }
   if (filters.type) rows = rows.filter((x) => x.type === filters.type);
   if (filters.brand) rows = rows.filter((x) => x.brand.toLowerCase() === filters.brand?.toLowerCase());
   if (filters.model) rows = rows.filter((x) => x.model.toLowerCase().includes(filters.model!.toLowerCase()));
@@ -55,7 +62,10 @@ export async function getListings(filters: MarketplaceFilters = {}) {
   const maxPrice = numericFilter(filters.maxPrice);
   let query = supabase.from("listings").select(listingSelect).eq("hidden", false);
   if (filters.q) query = query.textSearch("search_vector", filters.q, { config: "spanish", type: "websearch" });
-  if (filters.oem) query = query.ilike("reference_code", "%" + filters.oem + "%");
+  if (filters.oem) {
+    const normalized = normalizeReference(filters.oem);
+    if (normalized) query = query.ilike("reference_code_normalized", "%" + normalized + "%");
+  }
   if (filters.type) query = query.eq("type", filters.type);
   if (filters.brand) query = query.eq("brand", filters.brand);
   if (filters.model) query = query.ilike("model", "%" + filters.model + "%");
@@ -100,4 +110,13 @@ export async function getPartRequests() {
   if (!supabase) return [] as PartRequest[];
   const { data } = await supabase.from("part_requests").select("*, requester:profiles!part_requests_requester_id_fkey(id, display_name, location, phone, whatsapp, avatar_url, seller_kind, created_at)").eq("status", "open").order("created_at", { ascending: false }).limit(100);
   return (data ?? []) as unknown as PartRequest[];
+}
+
+export async function getOemCompatibilityKnowledge(reference?: string | null) {
+  if (!reference?.trim()) return [] as OemCompatibilitySuggestion[];
+  const supabase = getServerSupabase();
+  if (!supabase) return [] as OemCompatibilitySuggestion[];
+  const { data, error } = await supabase.rpc("oem_compatibility_suggestions", { p_reference: reference });
+  if (error) return [] as OemCompatibilitySuggestion[];
+  return (data ?? []) as OemCompatibilitySuggestion[];
 }
