@@ -10,18 +10,18 @@ export function Header() {
   const [professional, setProfessional] = useState(false);
 
   useEffect(() => {
-    const supabase = getBrowserSupabase();
-    if (!supabase) return;
+    const client = getBrowserSupabase();
+    if (!client) return;
 
     async function sync(userId?: string) {
       setLogged(Boolean(userId));
       if (!userId) { setProfessional(false); return; }
-      const { data } = await supabase.from("profiles").select("seller_kind").eq("id", userId).single();
+      const { data } = await client.from("profiles").select("seller_kind").eq("id", userId).single();
       setProfessional(data?.seller_kind === "professional");
     }
 
-    void supabase.auth.getUser().then(({ data }) => void sync(data.user?.id));
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => void sync(session?.user?.id));
+    void client.auth.getUser().then(({ data }) => void sync(data.user?.id));
+    const { data } = client.auth.onAuthStateChange((_event, session) => void sync(session?.user?.id));
     return () => data.subscription.unsubscribe();
   }, []);
 
