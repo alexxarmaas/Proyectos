@@ -1,21 +1,21 @@
 /* DESGUÁZALO — street garage / motorsport layer.
    Imported last so it deliberately overrides the old neutral MVP skin. */
 :root {
-  --race-bg: #141715;
+  --race-bg: var(--dg-dark);
   --race-panel: #1b1f1c;
   --race-panel-2: #222723;
   --race-panel-3: #282d29;
   --race-line: #383e39;
-  --race-paper: #f0efe9;
+  --race-paper: var(--dg-bg);
   --race-paper-2: #e7e5de;
-  --race-lime: #b6c18a;
-  --race-lime-hover: #c5cda6;
-  --race-lime-text: #d1d8b5;
-  --race-orange: #9c6d5d;
+  --race-lime: var(--dg-accent);
+  --race-lime-hover: var(--dg-accent-hover);
+  --race-lime-text: var(--dg-accent-text);
+  --race-orange: var(--dg-warm);
   --race-orange-deep: #81594c;
   --race-olive: #68714f;
   --race-muted: #8b918a;
-  --race-ink: #181b19;
+  --race-ink: var(--dg-ink);
 }
 
 ::selection { background: var(--race-lime); color: var(--race-ink); }
@@ -135,7 +135,7 @@ body {
   border-radius: 0 !important;
   border: 1px solid #c4c6bf !important;
   box-shadow: 7px 7px 0 #dddcd5 !important;
-  background: #fbfbf8 !important;
+  background: var(--dg-surface) !important;
 }
 
 .contact-card {
@@ -166,7 +166,7 @@ body {
 .spec-grid {
   border-radius: 0 !important;
   border: 1px solid #c4c6bf !important;
-  background: #fbfbf8;
+  background: var(--dg-surface);
 }
 .spec-grid > div { border-color: #ddded8 !important; }
 .spec-grid span {
@@ -231,7 +231,7 @@ body {
 }
 .type-toggle button.selected {
   border: 2px solid var(--race-ink) !important;
-  background: #fbfbf8 !important;
+  background: var(--dg-surface) !important;
   box-shadow: inset 4px 0 0 var(--race-lime);
 }
 
@@ -255,7 +255,7 @@ body {
   text-transform: none;
   letter-spacing: normal;
   border: 1px solid #b9bcb5 !important;
-  background: #fbfbf8 !important;
+  background: var(--dg-surface) !important;
 }
 .stack-form input:focus,
 .stack-form select:focus,
@@ -282,36 +282,36 @@ body {
 /* Palette harmonisation for the newer Tailwind screens. The first racing pass
    used fluorescent lime + orange directly in utility classes. Keeping this
    remap here makes the whole product calmer without losing the garage identity. */
-[class*="bg-[#c8ff1a]"] { background-color: var(--race-lime) !important; }
-[class*="text-[#c8ff1a]"] { color: var(--race-lime-text) !important; }
-[class*="border-[#c8ff1a]"] { border-color: var(--race-lime) !important; }
+[class*="bg-[var(--dg-accent)]"] { background-color: var(--race-lime) !important; }
+[class*="text-[var(--dg-accent)]"] { color: var(--race-lime-text) !important; }
+[class*="border-[var(--dg-accent)]"] { border-color: var(--race-lime) !important; }
 [class*="hover:bg-[#dcff6f]"]:hover { background-color: var(--race-lime-hover) !important; }
-[class*="hover:text-[#c8ff1a]"]:hover { color: var(--race-lime-text) !important; }
-[class*="bg-[#ff5a2f]"] { background-color: var(--race-orange) !important; }
-[class*="text-[#ff5a2f]"] { color: var(--race-orange) !important; }
-[class*="hover:bg-[#ff5a2f]"]:hover { background-color: var(--race-orange) !important; }
-[class*="hover:text-[#ff5a2f]"]:hover { color: var(--race-orange) !important; }
+[class*="hover:text-[var(--dg-accent)]"]:hover { color: var(--race-lime-text) !important; }
+[class*="bg-[var(--dg-warm)]"] { background-color: var(--race-orange) !important; }
+[class*="text-[var(--dg-warm)]"] { color: var(--race-orange) !important; }
+[class*="hover:bg-[var(--dg-warm)]"]:hover { background-color: var(--race-orange) !important; }
+[class*="hover:text-[var(--dg-warm)]"]:hover { color: var(--race-orange) !important; }
 [class*="text-[#7b9000]"] { color: var(--race-olive) !important; }
-[class*="text-[#b64527]"] { color: var(--race-orange-deep) !important; }
-[class*="hover:text-[#b64527]"]:hover { color: var(--race-orange-deep) !important; }
+[class*="text-[var(--dg-warm)]"] { color: var(--race-orange-deep) !important; }
+[class*="hover:text-[var(--dg-warm)]"]:hover { color: var(--race-orange-deep) !important; }
 [class*="text-[#d9ff67]"] { color: #d8dec0 !important; }
-[class*="bg-[#0b0d0e]"] { background-color: var(--race-bg) !important; }
-[class*="bg-[#101214]"] { background-color: var(--race-ink) !important; }
+[class*="bg-[var(--dg-dark)]"] { background-color: var(--race-bg) !important; }
+[class*="bg-[var(--dg-ink)]"] { background-color: var(--race-ink) !important; }
 [class*="bg-[#121516]"] { background-color: var(--race-panel) !important; }
 [class*="bg-[#171a1c]"] { background-color: var(--race-panel-2) !important; }
 [class*="bg-[#1b1f21]"] { background-color: var(--race-panel-3) !important; }
-[class*="bg-[#f3f4ef]"] { background-color: var(--race-paper) !important; }
-[class*="bg-[#e8eae4]"] { background-color: var(--race-paper-2) !important; }
-[class*="focus-within:border-[#c8ff1a]"]:focus-within { border-color: var(--race-lime) !important; }
-[class*="focus:ring-[#c8ff1a]"]:focus { --tw-ring-color: rgba(182,193,138,.3) !important; }
-article[class*="hover:shadow-[9px_9px_0_#c8ff1a]"]:hover { box-shadow: 9px 9px 0 #c9cbc3 !important; }
+[class*="bg-[var(--dg-bg)]"] { background-color: var(--race-paper) !important; }
+[class*="bg-[var(--dg-surface-alt)]"] { background-color: var(--race-paper-2) !important; }
+[class*="focus-within:border-[var(--dg-accent)]"]:focus-within { border-color: var(--race-lime) !important; }
+[class*="focus:ring-[var(--dg-accent)]"]:focus { --tw-ring-color: rgba(182,193,138,.3) !important; }
+article[class*="hover:shadow-[9px_9px_0_var(--dg-accent)]"]:hover { box-shadow: 9px 9px 0 #c9cbc3 !important; }
 
 /* Keep originally translucent decorative utilities translucent after remapping. */
-[class*="border-[#c8ff1a]/"] { border-color: rgba(182,193,138,.18) !important; }
-[class*="bg-[#c8ff1a]/"] { background-color: rgba(182,193,138,.09) !important; }
-[class*="bg-[#ff5a2f]/"] { background-color: rgba(156,109,93,.045) !important; }
-[class*="bg-[#101214]/"] { background-color: rgba(24,27,25,.94) !important; }
-[class*="bg-[#0b0d0e]/"] { background-color: rgba(20,23,21,.96) !important; }
+[class*="border-[var(--dg-accent)]/"] { border-color: rgba(182,193,138,.18) !important; }
+[class*="bg-[var(--dg-accent)]/"] { background-color: rgba(182,193,138,.09) !important; }
+[class*="bg-[var(--dg-warm)]/"] { background-color: rgba(156,109,93,.045) !important; }
+[class*="bg-[var(--dg-ink)]/"] { background-color: rgba(24,27,25,.94) !important; }
+[class*="bg-[var(--dg-dark)]/"] { background-color: rgba(20,23,21,.96) !important; }
 
 @media (max-width: 760px) {
   .contact-card { position: static; box-shadow: none !important; }

@@ -4,6 +4,7 @@ import "./globals.css";
 import "./brand.css";
 import "./modern.css";
 import "./racing.css";
+import "./theme.css";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { MobileNav } from "@/components/MobileNav";
@@ -37,7 +38,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="es" className={`${inter.variable} ${racing.variable}`}>
-      <body className="min-h-screen bg-[#f0efe9] text-[#181b19] antialiased">
+      <body className="min-h-screen bg-[var(--dg-bg)] text-[var(--dg-ink)] antialiased">
         <Header />
         <main className="min-h-[70vh]">{children}</main>
         <Footer />
