@@ -31,6 +31,7 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Lint
-        run: npx eslint . --rule 'react-hooks/set-state-in-effect: warn'
+        run: |
+          npx eslint . --rule "react-hooks/set-state-in-effect: warn"
       - name: Typecheck, tests and production build
         run: npm run typecheck && npm test && npm run build
