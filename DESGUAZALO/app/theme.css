@@ -565,3 +565,16 @@ html{scrollbar-gutter:stable}
   .legal-document section{padding:18px}
   .how-grid,.safety-grid{grid-template-columns:1fr}
 }
+
+
+/* Beta admin insights */
+.admin-section-head{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:14px}
+.admin-section-head h2{margin:3px 0 0}
+.admin-section-head>span{font-size:.72rem;font-weight:850;color:var(--dg-muted);text-transform:uppercase}
+.admin-funnel-note{margin:12px 0 0;border:1px solid var(--dg-line);background:var(--dg-surface-alt);padding:11px 13px;color:var(--dg-muted);font-size:.78rem;line-height:1.55}
+.admin-funnel-note strong{color:var(--dg-ink)}
+.admin-feedback-row>div{display:grid;gap:4px;min-width:0}
+.admin-feedback-row span{white-space:normal;line-height:1.45}
+.admin-feedback-row code{margin-top:3px;color:var(--dg-muted);font-size:.66rem;overflow-wrap:anywhere}
+.admin-feedback-row time{white-space:nowrap;color:var(--dg-muted);font-size:.72rem}
+@media(max-width:760px){.admin-section-head{align-items:start}.admin-feedback-row{align-items:start}}
