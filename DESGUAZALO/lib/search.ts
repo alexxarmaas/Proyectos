@@ -87,7 +87,7 @@ function detectOem(raw: string) {
         && /^[a-zA-Z0-9]{2,4}$/.test(first)
         && /[a-zA-Z]/.test(first)
         && /\d/.test(first)
-        && group.slice(1).every((token) => /^\d{2,4}$/.test(token.replace(/[^0-9]/g, "")));
+        && group.slice(1).every((token) => /^\d{2,4}$/.test(token));
       const compactOem = size === 1 && normalized.length >= 7 && digits >= 5 && letters >= 1;
       if ((compactOem || spacedOem) && normalized.length <= 18) {
         return { raw:group.join(" "), normalized };
