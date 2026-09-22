@@ -1,9 +1,12 @@
 {
+  "id":"./",
   "name":"REP Gym Tracker",
   "short_name":"REP",
   "start_url":"./",
+  "scope":"./",
   "display":"standalone",
   "background_color":"#090a0c",
   "theme_color":"#090a0c",
-  "description":"Gym tracker minimalista para series, repeticiones, peso y racha."
+  "description":"Gym tracker minimalista para series, repeticiones, peso y racha.",
+  "icons":[{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
 }
