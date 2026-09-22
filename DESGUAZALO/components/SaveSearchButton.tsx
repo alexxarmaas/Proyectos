@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { getBrowserSupabase } from "@/lib/supabase";
 
-export function SaveSearchButton({ params }: { params: Record<string, string | undefined> }) {
+export function SaveSearchButton({ params, nameHint }: { params: Record<string, string | undefined>; nameHint?:string }) {
   const router = useRouter();
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
@@ -12,15 +12,16 @@ export function SaveSearchButton({ params }: { params: Record<string, string | u
     const supabase = getBrowserSupabase();
     if (!supabase) return;
     setState("saving");
-    const { data: auth } = await supabase.auth.getUser();
+    const { data: auth } = await supabase.auth.getSession();
+    const user=auth.session?.user;
     const query = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => Boolean(entry[1])));
-    if (!auth.user) {
+    if (!user) {
       router.push("/login?next=" + encodeURIComponent("/marketplace?" + query.toString()));
       return;
     }
     const clean = Object.fromEntries(Array.from(query.entries()));
-    const name = clean.q || clean.oem || [clean.brand, clean.model, clean.category].filter(Boolean).join(" · ") || "Búsqueda de recambios";
-    const { error } = await supabase.from("saved_searches").insert({ user_id: auth.user.id, name, query_params: clean, alerts_enabled: true });
+    const name = nameHint || clean.q || clean.oem || [clean.brand, clean.model, clean.category].filter(Boolean).join(" · ") || "Búsqueda de recambios";
+    const { error } = await supabase.from("saved_searches").insert({ user_id: user.id, name, query_params: clean, alerts_enabled: true });
     setState(error ? "error" : "saved");
   }
 

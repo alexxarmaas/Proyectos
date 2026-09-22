@@ -1,4 +1,5 @@
 import { demoListings } from "./demo";
+import { distanceKm, toFiniteNumber } from "./geo";
 import { getServerSupabase } from "./supabase";
 import type { Listing, MarketplaceFilters, OemCompatibilitySuggestion, PartRequest } from "./types";
 
@@ -12,6 +13,22 @@ function numericFilter(value?: string) {
 
 function normalizeReference(value?: string) {
   return (value ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function applyDistance(rows:Listing[],filters:MarketplaceFilters){
+  const latitude=toFiniteNumber(filters.latitude);
+  const longitude=toFiniteNumber(filters.longitude);
+  const radius=toFiniteNumber(filters.radius);
+  if(latitude===undefined||longitude===undefined)return rows;
+  const withDistance=rows.map((row)=>({
+    ...row,
+    distance_km:typeof row.latitude==="number"&&typeof row.longitude==="number"
+      ?distanceKm(latitude,longitude,row.latitude,row.longitude)
+      :null
+  }));
+  const filtered=radius===undefined?withDistance:withDistance.filter((row)=>row.distance_km!==null&&row.distance_km<=radius);
+  if(filters.sort==="distance")filtered.sort((a,b)=>(a.distance_km??Number.MAX_SAFE_INTEGER)-(b.distance_km??Number.MAX_SAFE_INTEGER));
+  return filtered;
 }
 
 function filterDemoListings(filters: MarketplaceFilters = {}) {
@@ -38,6 +55,8 @@ function filterDemoListings(filters: MarketplaceFilters = {}) {
   if (filters.type) rows = rows.filter((x) => x.type === filters.type);
   if (filters.brand) rows = rows.filter((x) => x.brand.toLowerCase() === filters.brand?.toLowerCase());
   if (filters.model) rows = rows.filter((x) => x.model.toLowerCase().includes(filters.model!.toLowerCase()));
+  if (filters.generation) rows = rows.filter((x) => (x.generation ?? "").toLowerCase().includes(filters.generation!.toLowerCase()));
+  if (filters.engine) rows = rows.filter((x) => (x.engine ?? "").toLowerCase().includes(filters.engine!.toLowerCase()));
   if (year !== undefined) rows = rows.filter((x) => x.year === year);
   if (filters.category) rows = rows.filter((x) => x.category === filters.category);
   if (filters.location) rows = rows.filter((x) => x.location.toLowerCase().includes(filters.location!.toLowerCase()));
@@ -46,8 +65,11 @@ function filterDemoListings(filters: MarketplaceFilters = {}) {
   else rows = rows.filter((x) => x.status !== "sold");
   if (minPrice !== undefined) rows = rows.filter((x) => x.price !== null && x.price >= minPrice);
   if (maxPrice !== undefined) rows = rows.filter((x) => x.price !== null && x.price <= maxPrice);
+  rows=applyDistance(rows,filters);
   if (filters.sort === "price_asc") rows.sort((a, b) => (a.price ?? Number.MAX_SAFE_INTEGER) - (b.price ?? Number.MAX_SAFE_INTEGER));
   if (filters.sort === "price_desc") rows.sort((a, b) => (b.price ?? -1) - (a.price ?? -1));
+  if (filters.sort === "oldest") rows.sort((a,b)=>new Date(a.created_at).getTime()-new Date(b.created_at).getTime());
+  if (!filters.sort || filters.sort === "recent") rows.sort((a,b)=>new Date(b.created_at).getTime()-new Date(a.created_at).getTime());
   return rows.slice(0, filters.limit ?? 60);
 }
 
@@ -60,6 +82,7 @@ export async function getListings(filters: MarketplaceFilters = {}) {
   const year = numericFilter(filters.year);
   const minPrice = numericFilter(filters.minPrice);
   const maxPrice = numericFilter(filters.maxPrice);
+  const hasGeo=toFiniteNumber(filters.latitude)!==undefined&&toFiniteNumber(filters.longitude)!==undefined;
   let query = supabase.from("listings").select(listingSelect).eq("hidden", false);
   if (filters.q) query = query.textSearch("search_vector", filters.q, { config: "spanish", type: "websearch" });
   if (filters.oem) {
@@ -69,6 +92,8 @@ export async function getListings(filters: MarketplaceFilters = {}) {
   if (filters.type) query = query.eq("type", filters.type);
   if (filters.brand) query = query.eq("brand", filters.brand);
   if (filters.model) query = query.ilike("model", "%" + filters.model + "%");
+  if (filters.generation) query = query.ilike("generation", "%" + filters.generation + "%");
+  if (filters.engine) query = query.ilike("engine", "%" + filters.engine + "%");
   if (year !== undefined) query = query.eq("year", year);
   if (filters.category) query = query.eq("category", filters.category);
   if (filters.location) query = query.ilike("location", "%" + filters.location + "%");
@@ -78,14 +103,20 @@ export async function getListings(filters: MarketplaceFilters = {}) {
   if (minPrice !== undefined) query = query.gte("price", minPrice);
   if (maxPrice !== undefined) query = query.lte("price", maxPrice);
 
-  if (filters.sort === "price_asc") query = query.order("price", { ascending: true, nullsFirst: false });
-  else if (filters.sort === "price_desc") query = query.order("price", { ascending: false, nullsFirst: false });
-  else if (filters.sort === "oldest") query = query.order("created_at", { ascending: true });
+  if (!hasGeo && filters.sort === "price_asc") query = query.order("price", { ascending: true, nullsFirst: false });
+  else if (!hasGeo && filters.sort === "price_desc") query = query.order("price", { ascending: false, nullsFirst: false });
+  else if (!hasGeo && filters.sort === "oldest") query = query.order("created_at", { ascending: true });
   else query = query.order("created_at", { ascending: false });
 
-  const { data, error } = await query.limit(filters.limit ?? 60);
+  const { data, error } = await query.limit(hasGeo ? 300 : (filters.limit ?? 60));
   if (error) return [];
-  return (data ?? []) as unknown as Listing[];
+  let rows=(data ?? []) as unknown as Listing[];
+  rows=applyDistance(rows,filters);
+  if (filters.sort === "price_asc") rows.sort((a,b)=>(a.price??Number.MAX_SAFE_INTEGER)-(b.price??Number.MAX_SAFE_INTEGER));
+  else if (filters.sort === "price_desc") rows.sort((a,b)=>(b.price??-1)-(a.price??-1));
+  else if (filters.sort === "oldest") rows.sort((a,b)=>new Date(a.created_at).getTime()-new Date(b.created_at).getTime());
+  else if (filters.sort !== "distance") rows.sort((a,b)=>new Date(b.created_at).getTime()-new Date(a.created_at).getTime());
+  return rows.slice(0,filters.limit??60);
 }
 
 export async function getListingBySlug(slug: string) {

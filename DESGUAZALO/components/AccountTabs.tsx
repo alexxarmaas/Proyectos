@@ -6,6 +6,7 @@ const tabs = [
   ["garaje", "/cuenta/garaje", "Mi garaje"],
   ["busquedas", "/cuenta/busquedas", "Alertas"],
   ["solicitudes", "/cuenta/solicitudes", "Solicitudes"],
+  ["notificaciones", "/cuenta/notificaciones", "Notificaciones"],
   ["pro", "/pro", "Profesional"],
   ["perfil", "/cuenta/perfil", "Perfil"],
 ] as const;

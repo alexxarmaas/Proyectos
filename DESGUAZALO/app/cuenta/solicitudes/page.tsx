@@ -8,6 +8,13 @@ import { formatPrice } from "@/lib/format";
 import { getBrowserSupabase } from "@/lib/supabase";
 import type { PartRequest, RequestMatch } from "@/lib/types";
 
+function confidence(match:RequestMatch){
+  if(match.reasons.some(x=>x.toLowerCase().includes("oem")))return "Coincidencia exacta";
+  if(match.score>=90)return "Alta compatibilidad";
+  if(match.score>=70)return "Compatible";
+  return "Posible coincidencia";
+}
+
 export default function MyRequestsPage() {
   const router = useRouter();
   const supabase = getBrowserSupabase();
@@ -17,10 +24,11 @@ export default function MyRequestsPage() {
 
   async function load() {
     if (!supabase) { setLoading(false); return; }
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) { router.replace("/login?next=/cuenta/solicitudes"); return; }
+    const { data: auth } = await supabase.auth.getSession();
+    const user=auth.session?.user;
+    if (!user) { router.replace("/login?next=/cuenta/solicitudes"); return; }
 
-    const { data: requests } = await supabase.from("part_requests").select("*").eq("requester_id", auth.user.id).order("created_at", { ascending: false });
+    const { data: requests } = await supabase.from("part_requests").select("*").eq("requester_id", user.id).order("created_at", { ascending: false });
     const requestRows = (requests ?? []) as PartRequest[];
     setRows(requestRows);
 
@@ -100,11 +108,11 @@ export default function MyRequestsPage() {
                   <div>
                     <strong>{listing.title}</strong>
                     <span>{[listing.brand, listing.model, listing.generation, listing.year].filter(Boolean).join(" · ")}{listing.reference_code ? " · OEM " + listing.reference_code : ""}</span>
-                    <small>{match.reasons.join(" · ")}</small>
+                    <small><b>{confidence(match)}</b> · {match.reasons.join(" · ")}</small>
                   </div>
                   <div><b>{formatPrice(listing.price)}</b><span>Ver pieza →</span></div>
                 </Link>;
-              })}</div> : <p className="match-empty">Cuando entre una pieza que encaje por OEM o vehículo + descripción, aparecerá aquí automáticamente.</p>}
+              })}</div> : <p className="match-empty">Cuando entre una pieza que encaje por OEM, vehículo o una compatibilidad declarada, aparecerá aquí automáticamente.</p>}
             </div>}
           </article>;
         })}

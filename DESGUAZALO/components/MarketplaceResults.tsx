@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { getBrowserSupabase } from "@/lib/supabase";
 import type { Listing, ListingCompatibility, UserVehicle } from "@/lib/types";
 import { ListingCard } from "./ListingCard";
+import { MarketplaceMap } from "./MarketplaceMap";
 
 function same(a?: string | null, b?: string | null) {
   return Boolean(a && b && a.trim().toLowerCase() === b.trim().toLowerCase());
@@ -28,7 +29,7 @@ function listingFits(listing: Listing, vehicles: UserVehicle[]) {
 
 export function MarketplaceResults({ listings, requestHref }: { listings: Listing[]; requestHref: string }) {
   const router = useRouter();
-  const [view, setView] = useState<"grid" | "compact">("grid");
+  const [view, setView] = useState<"grid" | "compact" | "map">("grid");
   const [garageOnly, setGarageOnly] = useState(false);
   const [vehicles, setVehicles] = useState<UserVehicle[]>([]);
   const [logged, setLogged] = useState(false);
@@ -37,15 +38,17 @@ export function MarketplaceResults({ listings, requestHref }: { listings: Listin
     const supabase = getBrowserSupabase();
     if (!supabase) return;
     void (async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      setLogged(Boolean(auth.user));
-      if (!auth.user) return;
-      const { data } = await supabase.from("user_vehicles").select("*").eq("user_id", auth.user.id).order("is_primary", { ascending: false });
+      const { data: auth } = await supabase.auth.getSession();
+      const user=auth.session?.user;
+      setLogged(Boolean(user));
+      if (!user) return;
+      const { data } = await supabase.from("user_vehicles").select("*").eq("user_id", user.id).order("is_primary", { ascending: false });
       setVehicles((data ?? []) as UserVehicle[]);
     })();
   }, []);
 
   const visible = useMemo(() => garageOnly ? listings.filter((listing) => listingFits(listing, vehicles)) : listings, [garageOnly, listings, vehicles]);
+  const mappedCount=visible.filter(x=>typeof x.latitude==="number"&&typeof x.longitude==="number").length;
 
   function toggleGarage() {
     if (!logged) {
@@ -67,11 +70,12 @@ export function MarketplaceResults({ listings, requestHref }: { listings: Listin
           <button type="button" className={"dg-chip " + (garageOnly ? "active" : "")} onClick={toggleGarage}>⌁ Compatible con mi garaje</button>
           <button type="button" className={"dg-chip " + (view === "grid" ? "active" : "")} onClick={() => setView("grid")}>▦ Tarjetas</button>
           <button type="button" className={"dg-chip " + (view === "compact" ? "active" : "")} onClick={() => setView("compact")}>☰ Compacta</button>
+          {mappedCount>0&&<button type="button" className={"dg-chip " + (view === "map" ? "active" : "")} onClick={() => setView("map")}>⌖ Mapa · {mappedCount}</button>}
         </div>
       </div>
 
       {visible.length ? (
-        <div className={view === "grid" ? "grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-3" : "compact-grid"}>
+        view==="map"?<MarketplaceMap listings={visible}/>:<div className={view === "grid" ? "grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-3" : "compact-grid"}>
           {visible.map((listing) => <ListingCard key={listing.id} listing={listing} compact={view === "compact"} />)}
         </div>
       ) : (

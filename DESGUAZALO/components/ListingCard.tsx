@@ -20,7 +20,7 @@ export function ListingCard({ listing, compact = false }: { listing: Listing; co
           <div className="flex flex-wrap items-center gap-2"><StatusBadge status={listing.status} /><span className="text-[10px] font-bold uppercase tracking-[.07em] text-[var(--dg-muted)]">{typeLabel}</span></div>
           <Link href={"/pieza/" + listing.slug}><h3 className="mt-2 truncate text-base font-black text-[var(--dg-ink)]">{listing.title}</h3></Link>
           <p className="mt-1 truncate text-xs text-[var(--dg-muted)]">{vehicle}{listing.reference_code ? " · OEM " + listing.reference_code : ""}</p>
-          <p className="mt-2 text-xs text-[var(--dg-muted)]">{listing.location} · {relativeDate(listing.created_at)}</p>
+          <p className="mt-2 text-xs text-[var(--dg-muted)]">{listing.distance_km!==undefined&&listing.distance_km!==null?listing.distance_km.toFixed(1)+" km · ":""}{listing.location} · {relativeDate(listing.created_at)}</p>
         </div>
         <div className="listing-compact-price flex items-center justify-end p-4 text-right"><strong className="font-racing text-3xl font-black text-[var(--dg-ink)]">{formatPrice(listing.price)}</strong></div>
       </article>
@@ -46,7 +46,7 @@ export function ListingCard({ listing, compact = false }: { listing: Listing; co
         {listing.reference_code && <p className="mt-1 truncate text-[10px] font-bold uppercase tracking-[.06em] text-[var(--dg-accent-strong)]">OEM {listing.reference_code}</p>}
         <div className="mt-auto flex items-end justify-between gap-3 pt-5">
           <div><span className="block text-[9px] font-black uppercase tracking-[.14em] text-zinc-400">Precio</span><strong className="font-racing text-3xl font-black leading-none tracking-[-0.03em] text-[var(--dg-ink)]">{formatPrice(listing.price)}</strong></div>
-          <span className="max-w-[115px] truncate text-right text-[10px] font-semibold uppercase text-[var(--dg-muted)]">{listing.location}</span>
+          <span className="max-w-[125px] truncate text-right text-[10px] font-semibold uppercase text-[var(--dg-muted)]">{listing.distance_km!==undefined&&listing.distance_km!==null?listing.distance_km.toFixed(1)+" km · ":""}{listing.location}</span>
         </div>
       </div>
     </article>

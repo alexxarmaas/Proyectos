@@ -76,7 +76,7 @@ export type Listing = {
   category: string | null; condition: string; price: number | null; location: string; mileage: number | null;
   available_parts: string[] | null; reference_code: string | null; reference_code_normalized?: string | null;
   technical_notes: string | null; shipping_available?: boolean; pickup_available?: boolean; status: ListingStatus;
-  hidden: boolean; created_at: string; updated_at: string; listing_images?: ListingImage[];
+  hidden: boolean; latitude?: number | null; longitude?: number | null; distance_km?: number | null; created_at: string; updated_at: string; listing_images?: ListingImage[];
   listing_compatibilities?: ListingCompatibility[]; donor_parts?: DonorPart[]; seller?: Seller | null; is_demo?: boolean;
 };
 
@@ -96,6 +96,28 @@ export type SavedSearch = {
 };
 
 export type MarketplaceFilters = {
-  q?: string; oem?: string; brand?: string; model?: string; year?: string; category?: string; minPrice?: string; maxPrice?: string;
-  location?: string; condition?: string; status?: string; type?: string; sort?: string; limit?: number;
+  q?: string; oem?: string; brand?: string; model?: string; generation?: string; year?: string; engine?: string; category?: string; minPrice?: string; maxPrice?: string;
+  location?: string; condition?: string; status?: string; type?: string; sort?: string; latitude?: string; longitude?: string; radius?: string; limit?: number;
+};
+
+export type NotificationItem = {
+  id:string;
+  user_id:string;
+  kind:"request_match"|"saved_search_match"|"system";
+  title:string;
+  body:string|null;
+  href:string|null;
+  listing_id:string|null;
+  request_id:string|null;
+  saved_search_id:string|null;
+  read_at:string|null;
+  created_at:string;
+};
+
+export type DemandPreview = {
+  request_id:string;
+  request_title:string;
+  location:string;
+  score:number;
+  reasons:string[];
 };

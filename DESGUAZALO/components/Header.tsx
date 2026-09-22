@@ -4,16 +4,18 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getBrowserSupabase } from "@/lib/supabase";
 import { Logo } from "./Logo";
+import { NotificationBell } from "./NotificationBell";
 
 export function Header() {
-  const [logged, setLogged] = useState(false);
+  const [userId, setUserId] = useState<string | null | undefined>(undefined);
+  const logged = Boolean(userId);
 
   useEffect(() => {
     const client = getBrowserSupabase();
-    if (!client) return;
+    if (!client) { setUserId(null); return; }
 
-    void client.auth.getSession().then(({ data }) => setLogged(Boolean(data.session?.user)));
-    const { data } = client.auth.onAuthStateChange((_event, session) => setLogged(Boolean(session?.user)));
+    void client.auth.getSession().then(({ data }) => setUserId(data.session?.user.id ?? null));
+    const { data } = client.auth.onAuthStateChange((_event, session) => setUserId(session?.user.id ?? null));
     return () => data.subscription.unsubscribe();
   }, []);
 
@@ -27,6 +29,7 @@ export function Header() {
         {logged && <Link href="/pro" className="text-sm font-black text-[var(--dg-accent-text)] transition hover:text-white">Pro</Link>}
       </nav>
       <div className="flex items-center justify-end gap-2">
+        <NotificationBell userId={userId} />
         <Link href={logged?"/cuenta/anuncios":"/login"} className="hidden min-w-[88px] justify-center border border-white/15 bg-white/[.025] px-3.5 py-2 text-sm font-bold text-zinc-100 transition hover:border-white/30 hover:bg-white/[.055] sm:inline-flex">{logged?"Mi cuenta":"Entrar"}</Link>
         <Link href="/publicar" className="dg-cta-safe inline-flex items-center gap-2 bg-[var(--dg-accent)] px-4 py-2 text-sm font-black uppercase tracking-[.04em] text-[var(--dg-ink)] transition hover:bg-[var(--dg-accent-hover)]"><span aria-hidden>+</span><span>Publicar</span></Link>
       </div>
