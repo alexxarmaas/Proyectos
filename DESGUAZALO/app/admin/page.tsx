@@ -8,6 +8,8 @@ type AdminListing = { id:string; title:string; seller_id:string; status:string; 
 type AdminProfile = { id:string; display_name:string; location:string|null; is_admin:boolean; created_at:string };
 type AdminReport = { id:string; listing_id:string; reason:string; status:string; created_at:string };
 type AdminRequest = { id:string; title:string; requester_id:string; status:string; created_at:string };
+type ProductEvent = { id:string; name:string; created_at:string };
+type BetaFeedback = { id:string; category:string; attempted:string; happened:string; suggestion:string|null; page_url:string; created_at:string };
 
 export default function AdminPage(){
   const router=useRouter();
@@ -17,6 +19,8 @@ export default function AdminPage(){
   const [users,setUsers]=useState<AdminProfile[]>([]);
   const [reports,setReports]=useState<AdminReport[]>([]);
   const [requests,setRequests]=useState<AdminRequest[]>([]);
+  const [events,setEvents]=useState<ProductEvent[]>([]);
+  const [feedback,setFeedback]=useState<BetaFeedback[]>([]);
 
   useEffect(()=>{
     if(!supabase)return;
@@ -26,16 +30,21 @@ export default function AdminPage(){
       const {data:me}=await supabase.from("profiles").select("is_admin").eq("id",auth.user.id).single();
       if(!me?.is_admin){setAllowed(false);return;}
       setAllowed(true);
-      const [l,u,r,q]=await Promise.all([
+      const since=new Date(Date.now()-7*86_400_000).toISOString();
+      const [l,u,r,q,e,f]=await Promise.all([
         supabase.from("listings").select("id,title,seller_id,status,hidden,created_at").order("created_at",{ascending:false}).limit(100),
         supabase.from("profiles").select("id,display_name,location,is_admin,created_at").order("created_at",{ascending:false}).limit(100),
         supabase.from("reports").select("id,listing_id,reason,status,created_at").order("created_at",{ascending:false}).limit(100),
-        supabase.from("part_requests").select("id,title,requester_id,status,created_at").order("created_at",{ascending:false}).limit(100)
+        supabase.from("part_requests").select("id,title,requester_id,status,created_at").order("created_at",{ascending:false}).limit(100),
+        supabase.from("product_events").select("id,name,created_at").gte("created_at",since).order("created_at",{ascending:false}).limit(1000),
+        supabase.from("beta_feedback").select("id,category,attempted,happened,suggestion,page_url,created_at").order("created_at",{ascending:false}).limit(50)
       ]);
       setListings((l.data??[]) as AdminListing[]);
       setUsers((u.data??[]) as AdminProfile[]);
       setReports((r.data??[]) as AdminReport[]);
       setRequests((q.data??[]) as AdminRequest[]);
+      setEvents((e.data??[]) as ProductEvent[]);
+      setFeedback((f.data??[]) as BetaFeedback[]);
     })();
   },[router,supabase]);
 
@@ -52,10 +61,30 @@ export default function AdminPage(){
   const sold=listings.filter(x=>x.status==="sold").length;
   const open=reports.filter(x=>x.status==="open").length;
   const wanted=requests.filter(x=>x.status==="open").length;
+  const eventCount=(name:string)=>events.filter(event=>event.name===name).length;
+  const searches=eventCount("search");
+  const listingOpens=eventCount("listing_open");
+  const favorites=eventCount("favorite");
+  const contacts=eventCount("contact_whatsapp")+eventCount("contact_phone");
+  const publishStarted=eventCount("publish_started");
+  const publishCompleted=eventCount("publish_completed");
 
   return <div className="shell admin-page">
     <div className="admin-head"><span className="kicker">BACKOFFICE</span><h1>Panel de control</h1><p>Moderación de anuncios, solicitudes y reportes.</p></div>
     <div className="stats-grid"><div><span>Usuarios</span><strong>{users.length}</strong></div><div><span>Anuncios activos</span><strong>{active}</strong></div><div><span>Vendidos</span><strong>{sold}</strong></div><div><span>Se busca abiertos</span><strong>{wanted}</strong></div></div>
+
+    <section className="admin-section">
+      <div className="admin-section-head"><div><span className="kicker">ÚLTIMOS 7 DÍAS</span><h2>Uso de la beta</h2></div><span>{events.length} eventos</span></div>
+      <div className="stats-grid">
+        <div><span>Búsquedas</span><strong>{searches}</strong></div>
+        <div><span>Fichas abiertas</span><strong>{listingOpens}</strong></div>
+        <div><span>Favoritos</span><strong>{favorites}</strong></div>
+        <div><span>Contactos</span><strong>{contacts}</strong></div>
+      </div>
+      <p className="admin-funnel-note">Publicación: <strong>{publishCompleted}</strong> completadas de <strong>{publishStarted}</strong> iniciadas · Solicitudes: <strong>{eventCount("request_created")}</strong> · Importaciones Pro: <strong>{eventCount("pro_csv_import")}</strong></p>
+    </section>
+
+    <section className="admin-section"><h2>Feedback beta</h2><div className="admin-table">{feedback.length?feedback.map(item=><div className="admin-row admin-feedback-row" key={item.id}><div><strong>{item.category.toUpperCase()} · {item.attempted}</strong><span>{item.happened}</span>{item.suggestion&&<span>Mejoraría: {item.suggestion}</span>}<code>{item.page_url}</code></div><time>{new Date(item.created_at).toLocaleDateString("es-ES")}</time></div>):<p>Todavía no hay feedback.</p>}</div></section>
 
     <section className="admin-section"><h2>Reportes</h2><div className="admin-table">{reports.length?reports.map(r=><div className="admin-row" key={r.id}><div><strong>{r.reason}</strong><span>Anuncio {r.listing_id.slice(0,8)} · {r.status}</span></div>{r.status==="open"&&<button onClick={()=>resolve(r.id)}>Resolver</button>}</div>):<p>Sin reportes.</p>}</div></section>
 
