@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { legalIdentityComplete } from "@/lib/legal";
 
 export function LegalDocument({
@@ -10,7 +11,7 @@ export function LegalDocument({
   kicker: string;
   title: string;
   intro: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div className="shell legal-page">
