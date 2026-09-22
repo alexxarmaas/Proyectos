@@ -18,11 +18,11 @@ export function authErrorMessage(error: { message?: string; code?: string } | nu
   if (code === "user_already_exists" || message.includes("user already registered") || message.includes("already been registered")) {
     return "Ya existe una cuenta con ese email.";
   }
-  if (code === "weak_password" || message.includes("password should be") || message.includes("password is too weak")) {
-    return "La contraseña no cumple los requisitos de seguridad. Usa al menos 8 caracteres y evita contraseñas fáciles de adivinar.";
-  }
   if (code === "same_password" || message.includes("new password should be different") || message.includes("same password")) {
     return "La nueva contraseña debe ser distinta de la actual.";
+  }
+  if (code === "weak_password" || message.includes("password should be") || message.includes("password is too weak")) {
+    return "La contraseña no cumple los requisitos de seguridad. Usa al menos 8 caracteres y evita contraseñas fáciles de adivinar.";
   }
   if (code.includes("rate_limit") || message.includes("rate limit") || message.includes("email rate limit exceeded")) {
     return "Has hecho demasiados intentos seguidos. Espera un poco antes de volver a probar.";
