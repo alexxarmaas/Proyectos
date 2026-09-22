@@ -21,7 +21,10 @@ export function Header() {
 
   return <header className="sticky top-0 z-50 border-b border-white/10 bg-[var(--dg-dark)]/96 text-white backdrop-blur-md">
     <div className="mx-auto grid h-[66px] max-w-7xl grid-cols-[auto_1fr_auto] items-center gap-4 px-4 sm:px-6 lg:px-8">
-      <Logo light />
+      <div className="flex items-center gap-2">
+        <Logo light />
+        <span className="beta-badge" title="DESGUÁZALO está en beta cerrada">BETA</span>
+      </div>
       <nav className="hidden items-center justify-center gap-6 md:flex" aria-label="Navegación principal">
         <Link href="/marketplace" className="text-sm font-bold text-zinc-400 transition hover:text-zinc-100">Marketplace</Link>
         <Link href="/se-busca" className="text-sm font-bold text-zinc-400 transition hover:text-zinc-100">Se busca</Link>

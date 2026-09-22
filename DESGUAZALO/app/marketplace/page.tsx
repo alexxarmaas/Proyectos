@@ -81,14 +81,14 @@ export default async function Marketplace({ searchParams }: { searchParams: Sear
 
       <div className="mx-auto grid max-w-7xl gap-7 px-4 py-9 sm:px-6 lg:grid-cols-[270px_minmax(0,1fr)] lg:px-8">
         <aside className="dg-panel h-max lg:sticky lg:top-24">
-          <div className="border-b border-[var(--dg-line)] bg-[var(--dg-dark)] px-5 py-4 text-white">
-            <div className="flex items-center justify-between">
-              <strong className="font-racing text-lg font-black uppercase tracking-[.02em]">Filtros</strong>
-              <Link href="/marketplace" className="text-xs font-bold text-[var(--dg-accent-text)]">Limpiar</Link>
-            </div>
-          </div>
+          <details className="market-filter-details">
+            <summary className="market-filter-summary">
+              <strong className="font-racing text-lg font-black uppercase tracking-[.02em]">Filtros{active.length ? " (" + active.length + ")" : ""}</strong>
+              <span className="market-filter-summary-meta">{active.length ? active.length + " activos" : "Abrir"}</span>
+            </summary>
 
           <form id="filters-form" action="/marketplace" className="space-y-4 p-5">
+            {active.length > 0 && <div className="market-filter-clear"><Link href="/marketplace">Limpiar todos los filtros</Link></div>}
             {filters.q && <input type="hidden" name="q" value={filters.q} />}
             {filters.latitude&&<input type="hidden" name="latitude" value={filters.latitude}/>}
             {filters.longitude&&<input type="hidden" name="longitude" value={filters.longitude}/>}
@@ -121,6 +121,7 @@ export default async function Marketplace({ searchParams }: { searchParams: Sear
             <label className="block text-[11px] font-black uppercase tracking-[.06em] text-[var(--dg-muted)]">Orden<select name="sort" defaultValue={filters.sort ?? "recent"} className={fieldClass}><option value="recent">Más recientes</option>{geoActive&&<option value="distance">Más cercanos</option>}<option value="price_asc">Precio: menor primero</option><option value="price_desc">Precio: mayor primero</option><option value="oldest">Más antiguos</option></select></label>
             <button className="w-full bg-[var(--dg-dark)] px-4 py-3 text-sm font-black uppercase tracking-[.04em] text-white" type="submit">Aplicar filtros</button>
           </form>
+          </details>
         </aside>
 
         <section className="min-w-0">

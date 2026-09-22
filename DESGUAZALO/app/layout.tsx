@@ -5,6 +5,7 @@ import "./brand.css";
 import "./modern.css";
 import "./racing.css";
 import "./theme.css";
+import { BetaFeedback } from "@/components/BetaFeedback";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { MobileNav } from "@/components/MobileNav";
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <main className="min-h-[70vh]">{children}</main>
         <Footer />
         <MobileNav />
+        <BetaFeedback />
       </body>
     </html>
   );
