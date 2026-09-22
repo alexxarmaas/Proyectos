@@ -15,9 +15,9 @@ export default function ProBatchPage(){
   const router=useRouter();const supabase=getBrowserSupabase();
   const [vehicles,setVehicles]=useState<Vehicle[]>([]);const [vehicleId,setVehicleId]=useState("");
   const [rows,setRows]=useState<Draft[]>(()=>Array.from({length:5},makeDraft));
-  const [error,setError]=useState("");const [busy,setBusy]=useState(false);
+  const [error,setError]=useState("");const [busy,setBusy]=useState(false);const [loadingVehicles,setLoadingVehicles]=useState(true);
 
-  useEffect(()=>{if(!supabase)return;void(async()=>{const {data:auth}=await supabase.auth.getUser();if(!auth.user)return;const {data}=await supabase.from("listings").select("id,title,brand,model,generation,year,engine,location").eq("seller_id",auth.user.id).eq("type","vehicle").eq("hidden",false).order("created_at",{ascending:false});setVehicles((data??[]) as Vehicle[]);if(data?.[0])setVehicleId(data[0].id);})();},[supabase]);
+  useEffect(()=>{if(!supabase)return;void(async()=>{const {data:auth}=await supabase.auth.getSession();const user=auth.session?.user;if(!user)return;const {data}=await supabase.from("listings").select("id,title,brand,model,generation,year,engine,location").eq("seller_id",user.id).eq("type","vehicle").eq("hidden",false).order("created_at",{ascending:false});setVehicles((data??[]) as Vehicle[]);if(data?.[0])setVehicleId(data[0].id);setLoadingVehicles(false);})();},[supabase]);
 
   const selectedVehicle=useMemo(()=>vehicles.find(v=>v.id===vehicleId)??null,[vehicles,vehicleId]);
   function update(key:string,field:keyof Omit<Draft,"key">,value:string){setRows(prev=>prev.map(row=>row.key===key?{...row,[field]:value}:row));}
@@ -54,7 +54,7 @@ export default function ProBatchPage(){
   return <ProfessionalShell active="batch">
     <div className="pro-heading"><div><h1>Añadir lote</h1><p>Carga muchas piezas de un mismo vehículo sin repetir marca, modelo, motor y ubicación.</p></div><Link href="/pro/inventario" className="button button-ghost">Volver al inventario</Link></div>
 
-    {!vehicles.length?<div className="empty-state"><h2>Necesitas un vehículo donante</h2><p>Publica primero un coche para despiece. Después podrás cargar sus piezas en lote.</p><Link href="/publicar?type=vehicle" className="button button-primary">Publicar vehículo</Link></div>:<>
+    {loadingVehicles?<div className="loading-block">Cargando vehículos…</div>:!vehicles.length?<div className="empty-state"><h2>Necesitas un vehículo donante</h2><p>Publica primero un coche para despiece. Después podrás cargar sus piezas en lote.</p><Link href="/publicar?type=vehicle" className="button button-primary">Publicar vehículo</Link></div>:<>
       <section className="pro-batch-vehicle">
         <label>Vehículo donante<select value={vehicleId} onChange={e=>setVehicleId(e.target.value)}>{vehicles.map(v=><option value={v.id} key={v.id}>{v.title}</option>)}</select></label>
         {selectedVehicle&&<div><strong>{selectedVehicle.title}</strong><span>{[selectedVehicle.brand,selectedVehicle.model,selectedVehicle.generation,selectedVehicle.year,selectedVehicle.engine,selectedVehicle.location].filter(Boolean).join(" · ")}</span></div>}

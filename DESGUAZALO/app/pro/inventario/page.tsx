@@ -28,12 +28,12 @@ export default function ProfessionalInventoryPage(){
 
   async function load(){
     if(!supabase){setLoading(false);return;}
-    const {data:auth}=await supabase.auth.getUser(); if(!auth.user)return;
+    const {data:auth}=await supabase.auth.getSession(); const user=auth.session?.user; if(!user)return;
     const all:InventoryRow[]=[]; let offset=0;
     while(true){
       const {data,error}=await supabase.from("donor_parts")
         .select("*, private_meta:donor_part_private!donor_part_private_donor_part_id_fkey(donor_part_id,seller_id,internal_sku,storage_location,purchase_price,private_notes,batch_id), donor_part_images(id,public_url,position), vehicle:listings!donor_parts_vehicle_listing_id_fkey(id,title,slug,brand,model,generation,year,engine,location), published_listing:listings!donor_parts_published_listing_id_fkey(id,slug,title,status,hidden)")
-        .eq("seller_id",auth.user.id).order("created_at",{ascending:false}).range(offset,offset+999);
+        .eq("seller_id",user.id).order("created_at",{ascending:false}).range(offset,offset+999);
       if(error){setFeedback({type:"error",text:error.message});break;}
       const batch=(data??[]) as unknown as InventoryRow[]; all.push(...batch);
       if(batch.length<1000)break; offset+=1000;

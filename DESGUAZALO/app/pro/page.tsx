@@ -20,12 +20,12 @@ export default function ProDashboardPage(){
   const [loading,setLoading]=useState(true);
 
   useEffect(()=>{if(!supabase){setLoading(false);return;}void(async()=>{
-    const {data:auth}=await supabase.auth.getUser(); if(!auth.user)return;
+    const {data:auth}=await supabase.auth.getSession(); const user=auth.session?.user; if(!user)return;
     const [s,v,p,b]=await Promise.all([
       supabase.rpc("pro_inventory_summary"),
-      supabase.from("listings").select("id,title,slug,brand,model,generation,year,engine,status").eq("seller_id",auth.user.id).eq("type","vehicle").eq("hidden",false).order("created_at",{ascending:false}),
-      supabase.from("donor_parts").select("vehicle_listing_id").eq("seller_id",auth.user.id),
-      supabase.from("inventory_batches").select("*").eq("seller_id",auth.user.id).order("created_at",{ascending:false}).limit(6)
+      supabase.from("listings").select("id,title,slug,brand,model,generation,year,engine,status").eq("seller_id",user.id).eq("type","vehicle").eq("hidden",false).order("created_at",{ascending:false}),
+      supabase.from("donor_parts").select("vehicle_listing_id").eq("seller_id",user.id),
+      supabase.from("inventory_batches").select("*").eq("seller_id",user.id).order("created_at",{ascending:false}).limit(6)
     ]);
     if(s.data?.[0])setSummary(Object.fromEntries(Object.entries(s.data[0]).map(([k,val])=>[k,Number(val)])) as unknown as Summary);
     setVehicles((v.data??[]) as Vehicle[]); setParts((p.data??[]) as PartLink[]); setBatches((b.data??[]) as InventoryBatch[]); setLoading(false);

@@ -14,39 +14,55 @@ const nav = [
   ["photos", "/pro/fotos", "Fotos por SKU"],
 ] as const;
 
+type ProState = "private" | "professional";
+let cachedAccess: { userId: string; state: ProState } | null = null;
+
 export function ProfessionalShell({ active, children }: { active: string; children: ReactNode }) {
   const router = useRouter();
   const supabase = getBrowserSupabase();
-  const [state, setState] = useState<"loading" | "private" | "professional" | "error">("loading");
+  const [state, setState] = useState<"loading" | ProState | "error">(() => cachedAccess?.state ?? "loading");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!supabase) { setState("error"); return; }
     void (async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) {
+      const { data: auth } = await supabase.auth.getSession();
+      const user = auth.session?.user;
+      if (!user) {
+        cachedAccess = null;
         const next = typeof window === "undefined" ? "/pro" : window.location.pathname + window.location.search;
         router.replace("/login?next=" + encodeURIComponent(next));
         return;
       }
-      const { data, error } = await supabase.from("profiles").select("seller_kind").eq("id", auth.user.id).single();
+
+      if (cachedAccess?.userId === user.id) {
+        setState(cachedAccess.state);
+        return;
+      }
+
+      const { data, error } = await supabase.from("profiles").select("seller_kind").eq("id", user.id).single();
       if (error) { setState("error"); return; }
-      setState(data?.seller_kind === "professional" ? "professional" : "private");
+      const nextState: ProState = data?.seller_kind === "professional" ? "professional" : "private";
+      cachedAccess = { userId:user.id, state:nextState };
+      setState(nextState);
     })();
   }, [router, supabase]);
 
   async function activate() {
     if (!supabase) return;
     setBusy(true);
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) return;
-    const { error } = await supabase.from("profiles").update({ seller_kind:"professional", updated_at:new Date().toISOString() }).eq("id", auth.user.id);
-    if (!error) setState("professional");
-    else setState("error");
+    const { data: auth } = await supabase.auth.getSession();
+    const user = auth.session?.user;
+    if (!user) { setBusy(false); return; }
+    const { error } = await supabase.from("profiles").update({ seller_kind:"professional", updated_at:new Date().toISOString() }).eq("id", user.id);
+    if (!error) {
+      cachedAccess = { userId:user.id, state:"professional" };
+      setState("professional");
+    } else setState("error");
     setBusy(false);
   }
 
-  if (state === "loading") return <div className="shell account-page loading-block">Abriendo espacio profesional…</div>;
+  if (state === "loading") return <div className="shell pro-page"><div className="pro-shell-skeleton" aria-label="Cargando espacio profesional" /></div>;
 
   if (state === "private") return (
     <div className="shell account-page">
@@ -73,7 +89,7 @@ export function ProfessionalShell({ active, children }: { active: string; childr
     <div className="shell pro-page">
       <div className="pro-topbar"><div><span className="kicker">DESGUÁZALO PRO</span><strong>Inventario profesional</strong></div><Link href="/marketplace">Ver marketplace →</Link></div>
       <AccountTabs active="pro" />
-      <nav className="pro-nav" aria-label="DESGUÁZALO Pro">{nav.map(([key,href,label]) => <Link key={key} href={href} className={active===key?"active":""}>{label}</Link>)}</nav>
+      <nav className="pro-nav" aria-label="DESGUÁZALO Pro">{nav.map(([key,href,label]) => <Link key={key} href={href} prefetch className={active===key?"active":""}>{label}</Link>)}</nav>
       {children}
     </div>
   );

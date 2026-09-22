@@ -20,10 +20,10 @@ export default function ProInventoryEditPage({params}:{params:Promise<{id:string
   const [error,setError]=useState("");const [saved,setSaved]=useState(false);const [busy,setBusy]=useState(false);
 
   useEffect(()=>{if(!supabase)return;void(async()=>{
-    const {data:auth}=await supabase.auth.getUser();if(!auth.user){router.replace("/login?next="+encodeURIComponent("/pro/inventario/"+id));return;}
+    const {data:auth}=await supabase.auth.getSession();const user=auth.session?.user;if(!user){router.replace("/login?next="+encodeURIComponent("/pro/inventario/"+id));return;}
     const {data,error:queryError}=await supabase.from("donor_parts")
       .select("*, private_meta:donor_part_private!donor_part_private_donor_part_id_fkey(donor_part_id,seller_id,internal_sku,storage_location,purchase_price,private_notes,batch_id), donor_part_images(id,public_url,position), vehicle:listings!donor_parts_vehicle_listing_id_fkey(id,title,slug,brand,model,generation,year,engine,location), published_listing:listings!donor_parts_published_listing_id_fkey(id,slug,title,status,hidden)")
-      .eq("id",id).eq("seller_id",auth.user.id).maybeSingle();
+      .eq("id",id).eq("seller_id",user.id).maybeSingle();
     if(queryError||!data){setError("No existe esta pieza o no tienes acceso.");return;}
     const typed=data as unknown as Row;setRow(typed);setMeta({internal_sku:typed.private_meta?.internal_sku??"",storage_location:typed.private_meta?.storage_location??"",purchase_price:typed.private_meta?.purchase_price===null||typed.private_meta?.purchase_price===undefined?"":String(typed.private_meta.purchase_price),private_notes:typed.private_meta?.private_notes??""});
   })();},[id,router,supabase]);
@@ -33,9 +33,9 @@ export default function ProInventoryEditPage({params}:{params:Promise<{id:string
     const purchase=meta.purchase_price.trim()?Number(meta.purchase_price.replace(",",".")):null;
     if(purchase!==null&&(!Number.isFinite(purchase)||purchase<0)){setError("El coste no es válido.");setBusy(false);return;}
     try{
-      const {data:auth}=await supabase.auth.getUser();if(!auth.user)throw new Error("Sesión caducada.");
+      const {data:auth}=await supabase.auth.getSession();const user=auth.session?.user;if(!user)throw new Error("Sesión caducada.");
       const {error:publicError}=await supabase.from("donor_parts").update({name:row.name.trim(),category:row.category,reference_code:row.reference_code,price:row.price,condition:row.condition,quantity:row.quantity,notes:row.notes,status:row.status}).eq("id",row.id);if(publicError)throw publicError;
-      const {error:privateError}=await supabase.from("donor_part_private").upsert({donor_part_id:row.id,seller_id:auth.user.id,internal_sku:meta.internal_sku.trim()||null,storage_location:meta.storage_location.trim()||null,purchase_price:purchase,private_notes:meta.private_notes.trim()||null},{onConflict:"donor_part_id"});if(privateError)throw privateError;
+      const {error:privateError}=await supabase.from("donor_part_private").upsert({donor_part_id:row.id,seller_id:user.id,internal_sku:meta.internal_sku.trim()||null,storage_location:meta.storage_location.trim()||null,purchase_price:purchase,private_notes:meta.private_notes.trim()||null},{onConflict:"donor_part_id"});if(privateError)throw privateError;
       if(syncPublic&&row.published_listing_id){
         const {error:listingError}=await supabase.from("listings").update({title:row.name.trim(),category:row.category,reference_code:row.reference_code,price:row.price,condition:row.condition,status:row.status,description:row.notes||null,updated_at:new Date().toISOString()}).eq("id",row.published_listing_id);if(listingError)throw listingError;
       }

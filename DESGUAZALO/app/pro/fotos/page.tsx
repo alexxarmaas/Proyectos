@@ -44,14 +44,14 @@ export default function ProPhotosPage(){
 
   async function load(){
     if(!supabase){setLoading(false);return;}
-    const {data:auth}=await supabase.auth.getUser();if(!auth.user)return;
+    const {data:auth}=await supabase.auth.getSession();const user=auth.session?.user;if(!user)return;
     const [{data:privateRows,error:privateError},{data:imageRows,error:imageError}]=await Promise.all([
       supabase.from("donor_part_private")
         .select("donor_part_id,internal_sku,donor:donor_parts!donor_part_private_donor_part_id_fkey(id,name,published_listing_id)")
-        .eq("seller_id",auth.user.id),
+        .eq("seller_id",user.id),
       supabase.from("donor_part_images")
         .select("id,donor_part_id,position,public_url")
-        .eq("seller_id",auth.user.id)
+        .eq("seller_id",user.id)
         .order("position",{ascending:true})
     ]);
     if(privateError||imageError){
@@ -113,14 +113,15 @@ export default function ProPhotosPage(){
     if(!supabase||!valid.length)return;
     setBusy(true);setFeedback(null);
     let uploaded=0;let failed=0;
-    const {data:auth}=await supabase.auth.getUser();
-    if(!auth.user){setFeedback({type:"error",text:"La sesión ha caducado."});setBusy(false);return;}
+    const {data:auth}=await supabase.auth.getSession();
+    const user=auth.session?.user;
+    if(!user){setFeedback({type:"error",text:"La sesión ha caducado."});setBusy(false);return;}
 
     for(const item of valid){
       const donorPartId=item.donorPartId!;
       const position=item.position!;
       const ext=item.file.name.split(".").pop()?.toLowerCase()||"jpg";
-      const path=auth.user.id+"/pro/"+donorPartId+"/"+position+"-"+crypto.randomUUID()+"."+ext;
+      const path=user.id+"/pro/"+donorPartId+"/"+position+"-"+crypto.randomUUID()+"."+ext;
       const {error:uploadError}=await supabase.storage.from("listing-images").upload(path,item.file,{
         cacheControl:"3600",upsert:false,contentType:item.file.type
       });
@@ -129,7 +130,7 @@ export default function ProPhotosPage(){
       const {data:publicData}=supabase.storage.from("listing-images").getPublicUrl(path);
       const {data:imageRow,error:rowError}=await supabase.from("donor_part_images").insert({
         donor_part_id:donorPartId,
-        seller_id:auth.user.id,
+        seller_id:user.id,
         storage_path:path,
         public_url:publicData.publicUrl,
         position

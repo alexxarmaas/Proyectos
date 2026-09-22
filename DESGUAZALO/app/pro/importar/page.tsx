@@ -42,15 +42,15 @@ export default function CsvImportPage(){
   const [headers,setHeaders]=useState<string[]>([]);const [rawRows,setRawRows]=useState<string[][]>([]);
   const [mapping,setMapping]=useState<Mapping>(emptyMapping);const [fileName,setFileName]=useState("");
   const [existingSkus,setExistingSkus]=useState<Set<string>>(new Set());
-  const [error,setError]=useState("");const [busy,setBusy]=useState(false);
+  const [error,setError]=useState("");const [busy,setBusy]=useState(false);const [loadingInventory,setLoadingInventory]=useState(true);
 
   useEffect(()=>{if(!supabase)return;void(async()=>{
-    const {data:auth}=await supabase.auth.getUser();if(!auth.user)return;
-    const {data:v}=await supabase.from("listings").select("id,title,brand,model,generation,year,engine,location").eq("seller_id",auth.user.id).eq("type","vehicle").eq("hidden",false).order("created_at",{ascending:false});
+    const {data:auth}=await supabase.auth.getSession();const user=auth.session?.user;if(!user)return;
+    const {data:v}=await supabase.from("listings").select("id,title,brand,model,generation,year,engine,location").eq("seller_id",user.id).eq("type","vehicle").eq("hidden",false).order("created_at",{ascending:false});
     setVehicles((v??[]) as Vehicle[]);if(v?.[0])setVehicleId(v[0].id);
     const skuSet=new Set<string>();let offset=0;
-    while(true){const {data}=await supabase.from("donor_part_private").select("internal_sku").eq("seller_id",auth.user.id).not("internal_sku","is",null).range(offset,offset+999);const batch=data??[];for(const item of batch)if(item.internal_sku)skuSet.add(String(item.internal_sku).trim().toLowerCase());if(batch.length<1000)break;offset+=1000;}
-    setExistingSkus(skuSet);
+    while(true){const {data}=await supabase.from("donor_part_private").select("internal_sku").eq("seller_id",user.id).not("internal_sku","is",null).range(offset,offset+999);const batch=data??[];for(const item of batch)if(item.internal_sku)skuSet.add(String(item.internal_sku).trim().toLowerCase());if(batch.length<1000)break;offset+=1000;}
+    setExistingSkus(skuSet);setLoadingInventory(false);
   })();},[supabase]);
 
   const prepared=useMemo<Prepared[]>(()=>{
@@ -107,7 +107,7 @@ export default function CsvImportPage(){
   return <ProfessionalShell active="csv">
     <div className="pro-heading"><div><h1>Importar CSV</h1><p>Sube tu inventario existente, asigna columnas y valida antes de crear ninguna pieza.</p></div><div className="pro-heading-actions"><button className="button button-ghost" type="button" onClick={downloadTemplate}>Descargar plantilla</button><Link href="/pro/inventario" className="button button-dark">Inventario</Link></div></div>
 
-    {!vehicles.length?<div className="empty-state"><h2>Necesitas un vehículo donante</h2><p>La primera versión del importador carga cada archivo sobre un único vehículo donante para evitar asociaciones ambiguas.</p><Link href="/publicar?type=vehicle" className="button button-primary">Publicar vehículo</Link></div>:<>
+    {loadingInventory?<div className="loading-block">Preparando importador…</div>:!vehicles.length?<div className="empty-state"><h2>Necesitas un vehículo donante</h2><p>La primera versión del importador carga cada archivo sobre un único vehículo donante para evitar asociaciones ambiguas.</p><Link href="/publicar?type=vehicle" className="button button-primary">Publicar vehículo</Link></div>:<>
       <section className="csv-source">
         <label>Vehículo donante<select value={vehicleId} onChange={e=>setVehicleId(e.target.value)}>{vehicles.map(v=><option key={v.id} value={v.id}>{v.title}</option>)}</select></label>
         <label className="csv-drop"><input type="file" accept=".csv,text/csv" onChange={readFile}/><strong>{fileName||"Seleccionar CSV"}</strong><span>Separado por coma o punto y coma · máximo 5 MB</span></label>
