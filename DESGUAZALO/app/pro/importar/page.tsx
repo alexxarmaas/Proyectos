@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ProfessionalShell } from "@/components/ProfessionalShell";
 import { categories, conditions } from "@/lib/catalog";
 import { getBrowserSupabase } from "@/lib/supabase";
+import { trackEvent } from "@/lib/analytics";
 
 type Vehicle={id:string;title:string;brand:string;model:string;generation:string|null;year:number|null;engine:string|null;location:string};
 type FieldKey="name"|"category"|"reference_code"|"internal_sku"|"price"|"purchase_price"|"storage_location"|"condition"|"quantity"|"private_notes";
@@ -100,6 +101,7 @@ export default function CsvImportPage(){
       }));
       const {error:importError}=await supabase.rpc("pro_import_inventory",{p_vehicle_listing_id:vehicleId,p_source:"csv",p_filename:fileName,p_rows:payload});
       if(importError)throw importError;
+      await trackEvent("pro_csv_import",{targetId:vehicleId,metadata:{rows:valid.length,filename:fileName}});
       router.push("/pro/inventario");
     }catch(caught){setError(caught instanceof Error?caught.message:"No se pudo importar el CSV.");setBusy(false);}
   }
