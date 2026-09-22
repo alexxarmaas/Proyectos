@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { trackEvent, type ProductEventName } from "@/lib/analytics";
 
 export function TrackedContactLink({
@@ -15,7 +16,7 @@ export function TrackedContactLink({
   className?: string;
   eventName: Extract<ProductEventName, "contact_whatsapp" | "contact_phone">;
   targetId: string;
-  children: React.ReactNode;
+  children: ReactNode;
   target?: string;
   rel?: string;
 }) {
