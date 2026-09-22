@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { authErrorMessage, safeInternalPath } from "@/lib/auth";
 import { getBrowserSupabase } from "@/lib/supabase";
 
@@ -12,6 +12,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+
+  useEffect(() => {
+    setConfirmed(new URLSearchParams(window.location.search).get("confirmed") === "1");
+  }, []);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -39,8 +44,6 @@ export default function LoginPage() {
     const next = safeInternalPath(new URLSearchParams(window.location.search).get("next"));
     router.replace(next);
   }
-
-  const confirmed = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("confirmed") === "1";
 
   return (
     <div className="auth-shell">
