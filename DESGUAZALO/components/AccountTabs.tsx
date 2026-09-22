@@ -9,6 +9,7 @@ const tabs = [
   ["notificaciones", "/cuenta/notificaciones", "Notificaciones"],
   ["pro", "/pro", "Profesional"],
   ["perfil", "/cuenta/perfil", "Perfil"],
+  ["seguridad", "/cuenta/seguridad", "Seguridad"],
 ] as const;
 
 export function AccountTabs({ active }: { active: string }) {
