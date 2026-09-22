@@ -2,19 +2,29 @@ const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
 
 const STORAGE_KEY = 'rep-gym-mvp-v1';
-const catalog = [
-  'Press banca','Press inclinado','Press sentado','Aperturas máquina','Fondos','Extensión tríceps polea',
-  'Jalón al pecho','Remo sentado','Remo máquina','Pullover polea','Curl bíceps polea','Curl martillo',
-  'Press hombro','Elevaciones laterales','Pájaros máquina',
-  'Sentadilla','Prensa','Extensión cuádriceps','Curl femoral sentado','Curl femoral tumbado','Gemelos','Aductores','Abductores','Patada de glúteo'
+const exerciseCatalog = [
+  {group:'Pecho', icon:'◒', exercises:['Press banca con barra','Press banca con mancuernas','Press inclinado con barra','Press inclinado con mancuernas','Press de pecho en máquina','Press inclinado en máquina','Aperturas en máquina (pec deck)','Aperturas en polea','Flexiones','Fondos para pecho']},
+  {group:'Espalda', icon:'▤', exercises:['Jalón al pecho','Jalón al pecho agarre neutro','Dominadas','Dominadas asistidas','Remo sentado en polea','Remo en máquina','Remo con mancuerna','Remo con barra','Remo T-Bar','Pullover en polea','Hiperextensiones']},
+  {group:'Hombro', icon:'◆', exercises:['Press militar con mancuernas','Press de hombro en máquina','Press militar con barra','Elevaciones laterales con mancuernas','Elevaciones laterales en polea','Elevaciones laterales en máquina','Pájaros en máquina','Pájaros con mancuernas','Face pull']},
+  {group:'Bíceps', icon:'⌁', exercises:['Curl de bíceps con barra Z','Curl de bíceps con mancuernas','Curl alterno con mancuernas','Curl martillo','Curl de bíceps en polea','Curl predicador','Curl predicador en máquina','Curl inclinado con mancuernas']},
+  {group:'Tríceps', icon:'⌇', exercises:['Extensión de tríceps en polea con cuerda','Extensión de tríceps en polea con barra','Extensión de tríceps por encima de la cabeza en polea','Press francés con barra Z','Press francés con mancuernas','Fondos asistidos','Fondos en paralelas','Press cerrado']},
+  {group:'Cuádriceps', icon:'△', exercises:['Sentadilla','Sentadilla en multipower','Hack squat','Prensa de piernas','Extensión de cuádriceps','Sentadilla búlgara','Zancadas','Step-up']},
+  {group:'Isquios', icon:'▽', exercises:['Curl femoral sentado','Curl femoral tumbado','Peso muerto rumano con barra','Peso muerto rumano con mancuernas','Buenos días']},
+  {group:'Glúteo', icon:'●', exercises:['Hip thrust con barra','Hip thrust en máquina','Puente de glúteo','Patada de glúteo en polea','Patada de glúteo en máquina','Abductores en máquina','Sentadilla sumo','Step-up']},
+  {group:'Gemelo', icon:'│', exercises:['Elevación de gemelos de pie','Elevación de gemelos sentado','Gemelos en prensa','Gemelos en máquina']},
+  {group:'Core', icon:'◎', exercises:['Crunch en máquina','Crunch en polea','Elevación de rodillas colgado','Elevación de piernas','Plancha','Rueda abdominal','Rotación de torso en máquina']},
+  {group:'Aductores', icon:'◇', exercises:['Aductores en máquina','Sentadilla sumo']}
 ];
+const catalog = exerciseCatalog.flatMap(g=>g.exercises);
+
+const seed =
 
 const seed = {
   settings:{weeklyGoal:4, restSeconds:90},
   routines:[
-    {id:'r-back', name:'Espalda + bíceps', exercises:['Jalón al pecho','Remo sentado','Remo máquina','Curl bíceps polea','Curl martillo','Elevaciones laterales']},
-    {id:'r-push', name:'Pecho + tríceps', exercises:['Press banca','Press inclinado','Aperturas máquina','Extensión tríceps polea','Press hombro']},
-    {id:'r-leg', name:'Pierna', exercises:['Prensa','Sentadilla','Extensión cuádriceps','Curl femoral sentado','Gemelos','Abductores']}
+    {id:'r-back', name:'Espalda + bíceps', exercises:['Jalón al pecho','Remo sentado en polea','Remo en máquina','Pullover en polea','Curl de bíceps en polea','Curl martillo','Elevaciones laterales en máquina']},
+    {id:'r-push', name:'Pecho + tríceps', exercises:['Press de pecho en máquina','Press inclinado con mancuernas','Aperturas en máquina (pec deck)','Extensión de tríceps en polea con cuerda','Press de hombro en máquina']},
+    {id:'r-leg', name:'Pierna', exercises:['Prensa de piernas','Sentadilla','Extensión de cuádriceps','Curl femoral sentado','Hip thrust en máquina','Gemelos en prensa','Abductores en máquina']}
   ],
   workouts:[],
   active:null
@@ -25,6 +35,7 @@ let view = 'home';
 let restInterval = null;
 let restUntil = null;
 let toastTimer = null;
+let elapsedInterval = null;
 
 function load(){
   try{
@@ -40,8 +51,11 @@ function isoDay(d=new Date()){ const y=d.getFullYear(); const m=String(d.getMont
 function prettyDate(ts){ return new Intl.DateTimeFormat('es-ES',{weekday:'short',day:'numeric',month:'short'}).format(new Date(ts)); }
 function mins(ms){ return Math.max(1,Math.round(ms/60000)); }
 function fmtTime(ms){ const s=Math.max(0,Math.floor(ms/1000)); return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; }
+function fmtRest(s){ s=Math.max(0,s); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; }
 function volume(w){ return w.exercises.flatMap(e=>e.sets).filter(s=>s.done).reduce((a,s)=>a+(Number(s.weight)||0)*(Number(s.reps)||0),0); }
 function completedSets(w){ return w.exercises.flatMap(e=>e.sets).filter(s=>s.done).length; }
+function exerciseDone(e){ return e.sets.length>0 && e.sets.every(s=>s.done); }
+function groupForExercise(name){ return exerciseCatalog.find(g=>g.exercises.includes(name))?.group || 'Otro'; }
 
 function weekStart(date=new Date()){
   const d=new Date(date); const day=(d.getDay()+6)%7; d.setHours(0,0,0,0); d.setDate(d.getDate()-day); return d;
@@ -71,6 +85,7 @@ function bestSetText(name){
 }
 
 function render(){
+  clearInterval(elapsedInterval); elapsedInterval=null;
   const app=$('#app');
   if(state.active){ app.innerHTML=workoutView(); bindWorkout(); return; }
   app.innerHTML=`<main class="app-shell">${topbar()}${view==='home'?homeView():view==='routines'?routinesView():view==='history'?historyView():settingsView()}</main>${nav()}`;
@@ -143,13 +158,18 @@ function workoutView(){
   </main>${restUntil?restBar():''}`;
 }
 function exerciseBlock(e,ei){
-  return `<section class="exercise"><div class="exercise-head"><div class="card-row"><div><h3>${escapeHtml(e.name)}</h3><div class="last">Última vez: ${escapeHtml(bestSetText(e.name))}</div></div><button class="icon-btn" data-remove-ex="${ei}">⋯</button></div></div>
-    <div class="set-head"><span>Set</span><span>kg</span><span>reps</span><span>✓</span></div>
-    ${e.sets.map((s,si)=>`<div class="set-row"><div class="set-num">${si+1}</div><input class="set-input" inputmode="decimal" type="number" step="0.5" placeholder="kg" value="${s.weight}" data-weight="${ei}:${si}"><input class="set-input" inputmode="numeric" type="number" step="1" placeholder="reps" value="${s.reps}" data-reps="${ei}:${si}"><button class="check ${s.done?'done':''}" data-done="${ei}:${si}">${s.done?'✓':'○'}</button></div>`).join('')}
+  const complete=exerciseDone(e);
+  return `<section class="exercise ${complete?'exercise-complete':''}"><div class="exercise-head"><div class="card-row"><div><div class="exercise-title-row"><h3>${escapeHtml(e.name)}</h3>${complete?'<span class="done-badge">Completado</span>':''}</div><div class="last">${escapeHtml(groupForExercise(e.name))} · Última vez: ${escapeHtml(bestSetText(e.name))}</div></div><div class="exercise-tools"><button class="mini-icon" data-move-up="${ei}" ${ei===0?'disabled':''}>↑</button><button class="mini-icon" data-move-down="${ei}" ${ei===state.active.exercises.length-1?'disabled':''}>↓</button><button class="mini-icon danger-icon" data-remove-ex="${ei}">×</button></div></div></div>
+    <div class="set-head"><span>Set</span><span>kg</span><span>reps</span><span></span><span>✓</span></div>
+    ${e.sets.map((s,si)=>`<div class="set-row ${s.done?'set-done':''}"><div class="set-num">${si+1}</div><input class="set-input" inputmode="decimal" type="number" step="0.5" placeholder="kg" value="${s.weight}" data-weight="${ei}:${si}"><input class="set-input" inputmode="numeric" type="number" step="1" placeholder="reps" value="${s.reps}" data-reps="${ei}:${si}"><button class="set-delete" data-delset="${ei}:${si}" aria-label="Borrar serie">−</button><button class="check ${s.done?'done':''}" data-done="${ei}:${si}">${s.done?'✓':'○'}</button></div>`).join('')}
     <div class="exercise-actions"><button class="secondary" data-addset="${ei}">+ Serie</button><button class="secondary" data-prefill="${ei}">Copiar anterior</button></div>
   </section>`;
 }
-function restBar(){return `<div class="restbar"><span>⏱</span><div class="grow"><div class="small">Descanso</div><strong id="rest-left">${restSecondsLeft()}s</strong></div><button id="rest-plus">+30</button><button id="rest-skip">Saltar</button></div>`;}
+function restBar(){
+  const left=restSecondsLeft();
+  const pct=Math.max(0,Math.min(100,left/Math.max(1,state.settings.restSeconds)*100));
+  return `<div class="restbar"><span class="rest-icon">⏱</span><div class="grow"><div class="rest-top"><span>Descanso</span><strong id="rest-left">${fmtRest(left)}</strong></div><div class="rest-progress"><span id="rest-progress" style="width:${pct}%"></span></div></div><button id="rest-plus">+30</button><button id="rest-skip">Saltar</button></div>`;
+}
 function restSecondsLeft(){ return Math.max(0,Math.ceil((restUntil-Date.now())/1000)); }
 
 function bindCommon(){
@@ -164,21 +184,34 @@ function bindCommon(){
 function bindWorkout(){
   const started=state.active.startedAt;
   const elapsed=$('#elapsed');
-  const timer=setInterval(()=>{if(!state.active){clearInterval(timer);return;} if(elapsed) elapsed.textContent=fmtTime(Date.now()-started);},1000);
+  clearInterval(elapsedInterval);
+  elapsedInterval=setInterval(()=>{if(!state.active){clearInterval(elapsedInterval);return;} if(elapsed) elapsed.textContent=fmtTime(Date.now()-started);},1000);
   $$('[data-weight]').forEach(i=>i.oninput=()=>updateSet(i.dataset.weight,'weight',i.value));
   $$('[data-reps]').forEach(i=>i.oninput=()=>updateSet(i.dataset.reps,'reps',i.value));
   $$('[data-done]').forEach(b=>b.onclick=()=>toggleDone(b.dataset.done));
   $$('[data-addset]').forEach(b=>b.onclick=()=>{const e=state.active.exercises[+b.dataset.addset];const prev=e.sets.at(-1)||{};e.sets.push({weight:prev.weight||'',reps:prev.reps||'',done:false});save();render();});
-  $$('[data-prefill]').forEach(b=>b.onclick=()=>{const e=state.active.exercises[+b.dataset.prefill];const last=lastExerciseSets(e.name);if(last?.length)e.sets=last.map(s=>({weight:s.weight,reps:s.reps,done:false}));save();render();});
+  $$('[data-delset]').forEach(b=>b.onclick=()=>deleteSet(b.dataset.delset));
+  $$('[data-prefill]').forEach(b=>b.onclick=()=>{const e=state.active.exercises[+b.dataset.prefill];const last=lastExerciseSets(e.name);if(last?.length)e.sets=last.map(s=>({weight:s.weight,reps:s.reps,done:false}));else toast('Todavía no hay una sesión anterior');save();render();});
   $$('[data-remove-ex]').forEach(b=>b.onclick=()=>removeExercise(+b.dataset.removeEx));
+  $$('[data-move-up]').forEach(b=>b.onclick=()=>moveExercise(+b.dataset.moveUp,-1));
+  $$('[data-move-down]').forEach(b=>b.onclick=()=>moveExercise(+b.dataset.moveDown,1));
   $('#add-exercise').onclick=()=>openExerciseModal();
   $('#finish-workout').onclick=finishWorkout;
-  $('#cancel-workout').onclick=()=>{if(confirm('¿Descartar este entrenamiento?')){state.active=null;save();render();}};
-  $('#rest-plus')?.addEventListener('click',()=>{restUntil+=30000;startRestTick();});
+  $('#cancel-workout').onclick=()=>{if(confirm('¿Descartar este entrenamiento?')){state.active=null;stopRest();save();render();}};
+  $('#rest-plus')?.addEventListener('click',()=>{restUntil+=30000;startRestTick();updateRestUi();});
   $('#rest-skip')?.addEventListener('click',()=>{stopRest();render();});
   startRestTick();
 }
 function updateSet(key,field,value){const [ei,si]=key.split(':').map(Number);state.active.exercises[ei].sets[si][field]=value;save();}
+function deleteSet(key){
+  const [ei,si]=key.split(':').map(Number); const e=state.active.exercises[ei];
+  if(e.sets.length===1){toast('Un ejercicio debe tener al menos una serie');return;}
+  e.sets.splice(si,1); save(); render();
+}
+function moveExercise(ei,dir){
+  const ni=ei+dir; if(ni<0||ni>=state.active.exercises.length)return;
+  const [e]=state.active.exercises.splice(ei,1); state.active.exercises.splice(ni,0,e); save(); render();
+}
 function toggleDone(key){
   const [ei,si]=key.split(':').map(Number); const s=state.active.exercises[ei].sets[si];
   s.done=!s.done; save();
@@ -189,31 +222,70 @@ function removeExercise(ei){if(confirm(`¿Quitar ${state.active.exercises[ei].na
 function finishWorkout(){
   const w=state.active; const done=completedSets(w);
   if(!done && !confirm('No has marcado ninguna serie como hecha. ¿Terminar igualmente?')) return;
-  w.finishedAt=Date.now(); state.workouts.push(w); state.active=null; restUntil=null; stopRest(); save(); view='home'; render(); toast(`Entrenamiento guardado · ${done} series`);
+  w.finishedAt=Date.now(); state.workouts.push(w); state.active=null; restUntil=null; stopRest(); clearInterval(elapsedInterval); elapsedInterval=null; save(); view='home'; render(); toast(`Entrenamiento guardado · ${done} series`);
+}
+function updateRestUi(){
+  const left=restSecondsLeft();
+  const el=$('#rest-left'); if(el) el.textContent=fmtRest(left);
+  const p=$('#rest-progress'); if(p){const total=Math.max(1,state.settings.restSeconds);p.style.width=`${Math.max(0,Math.min(100,left/total*100))}%`;}
 }
 function startRestTick(){
   clearInterval(restInterval); if(!restUntil)return;
+  updateRestUi();
   restInterval=setInterval(()=>{
-    const el=$('#rest-left'); const left=restSecondsLeft();
-    if(el) el.textContent=`${left}s`;
+    const left=restSecondsLeft(); updateRestUi();
     if(left<=0){stopRest(); if(navigator.vibrate) navigator.vibrate([80,60,80]); render();}
-  },500);
+  },250);
 }
 function stopRest(){clearInterval(restInterval);restInterval=null;restUntil=null;}
 
+
+function catalogHtml(selectedGroup='Todos',query=''){
+  const q=query.trim().toLowerCase();
+  return exerciseCatalog.filter(g=>selectedGroup==='Todos'||g.group===selectedGroup).map(g=>{
+    const items=g.exercises.filter(x=>!q||x.toLowerCase().includes(q)); if(!items.length)return '';
+    return `<section class="catalog-group"><div class="catalog-title"><span>${g.icon}</span><strong>${g.group}</strong><small>${items.length}</small></div><div class="exercise-picker">${items.map(x=>`<button class="chip" data-exchoice="${escapeAttr(x)}">${escapeHtml(x)}</button>`).join('')}</div></section>`;
+  }).join('');
+}
+function groupFilters(active='Todos'){
+  return `<div class="group-filters">${['Todos',...exerciseCatalog.map(g=>g.group)].map(g=>`<button class="group-chip ${g===active?'selected':''}" data-group="${escapeAttr(g)}">${escapeHtml(g)}</button>`).join('')}</div>`;
+}
+function routineCatalogHtml(selectedGroup='Todos',query='',selected=new Set()){
+  const q=query.trim().toLowerCase();
+  return exerciseCatalog.filter(g=>selectedGroup==='Todos'||g.group===selectedGroup).map(g=>{
+    const items=g.exercises.filter(x=>!q||x.toLowerCase().includes(q)); if(!items.length)return '';
+    return `<section class="catalog-group"><div class="catalog-title"><span>${g.icon}</span><strong>${g.group}</strong></div><div class="exercise-picker">${items.map(x=>`<button class="chip ${selected.has(x)?'selected':''}" data-rchoice="${escapeAttr(x)}">${escapeHtml(x)}</button>`).join('')}</div></section>`;
+  }).join('');
+}
+
 function openExerciseModal(){
-  const choices=[...catalog, ...state.routines.flatMap(r=>r.exercises)].filter((x,i,a)=>a.indexOf(x)===i);
-  modal(`<h2>Añadir ejercicio</h2><input class="form-input" id="exercise-search" placeholder="Buscar o escribir ejercicio…"><div class="exercise-picker mt12" id="exercise-list">${choices.map(x=>`<button class="chip" data-exchoice="${escapeAttr(x)}">${escapeHtml(x)}</button>`).join('')}</div><div class="modal-actions"><button class="secondary" data-close>Cerrar</button><button class="primary" id="add-custom">Añadir escrito</button></div>`);
-  const filter=()=>{const q=$('#exercise-search').value.toLowerCase();$$('[data-exchoice]').forEach(b=>b.style.display=b.dataset.exchoice.toLowerCase().includes(q)?'':'none');};
-  $('#exercise-search').oninput=filter;
-  $$('[data-exchoice]').forEach(b=>b.onclick=()=>addExercise(b.dataset.exchoice));
+  let activeGroup='Todos';
+  modal(`<div class="modal-sticky"><h2>Añadir ejercicio</h2><input class="form-input" id="exercise-search" placeholder="Buscar ejercicio…">${groupFilters(activeGroup)}</div><div id="catalog-list">${catalogHtml(activeGroup)}</div><div class="custom-add"><div class="eyebrow">¿No aparece?</div><p class="subtle mb0">Escribe el nombre arriba y añádelo igualmente.</p></div><div class="modal-actions"><button class="secondary" data-close>Cerrar</button><button class="primary" id="add-custom">Añadir escrito</button></div>`);
+  const bindChoices=()=>$$('[data-exchoice]').forEach(b=>b.onclick=()=>addExercise(b.dataset.exchoice));
+  const redraw=()=>{
+    $('#catalog-list').innerHTML=catalogHtml(activeGroup,$('#exercise-search').value);
+    bindChoices();
+    $$('.group-chip').forEach(b=>b.classList.toggle('selected',b.dataset.group===activeGroup));
+  };
+  bindChoices();
+  $('#exercise-search').oninput=redraw;
+  $$('.group-chip').forEach(b=>b.onclick=()=>{activeGroup=b.dataset.group;redraw();});
   $('#add-custom').onclick=()=>{const v=$('#exercise-search').value.trim();if(v)addExercise(v);};
 }
 function addExercise(name){state.active.exercises.push({id:uid('e'),name,sets:defaultSets(name)});save();closeModal();render();}
 function openRoutineModal(){
-  modal(`<h2>Nueva rutina</h2><div class="form-group"><label>NOMBRE</label><input class="form-input" id="routine-name" placeholder="Ej. Torso rápido"></div><div class="form-group"><label>EJERCICIOS</label><div class="exercise-picker">${catalog.map(x=>`<button class="chip" data-rchoice="${escapeAttr(x)}">${escapeHtml(x)}</button>`).join('')}</div></div><div class="modal-actions"><button class="secondary" data-close>Cancelar</button><button class="primary" id="save-routine">Guardar</button></div>`);
-  $$('[data-rchoice]').forEach(b=>b.onclick=()=>b.classList.toggle('selected'));
-  $('#save-routine').onclick=()=>{const name=$('#routine-name').value.trim()||'Nueva rutina';const exercises=$$('.chip.selected').map(b=>b.dataset.rchoice);if(!exercises.length){toast('Selecciona al menos un ejercicio');return;}state.routines.push({id:uid('r'),name,exercises});save();closeModal();render();};
+  let activeGroup='Todos'; const selected=new Set();
+  modal(`<div class="modal-sticky"><h2>Nueva rutina</h2><div class="form-group"><label>NOMBRE</label><input class="form-input" id="routine-name" placeholder="Ej. Torso rápido"></div><input class="form-input" id="routine-search" placeholder="Buscar ejercicio…">${groupFilters(activeGroup)}</div><div id="routine-catalog">${routineCatalogHtml(activeGroup,'',selected)}</div><div class="modal-actions"><button class="secondary" data-close>Cancelar</button><button class="primary" id="save-routine">Guardar</button></div>`);
+  const bindChoices=()=>$$('[data-rchoice]').forEach(b=>b.onclick=()=>{const n=b.dataset.rchoice;selected.has(n)?selected.delete(n):selected.add(n);b.classList.toggle('selected',selected.has(n));});
+  const redraw=()=>{
+    $('#routine-catalog').innerHTML=routineCatalogHtml(activeGroup,$('#routine-search').value,selected);
+    bindChoices();
+    $$('.group-chip').forEach(b=>b.classList.toggle('selected',b.dataset.group===activeGroup));
+  };
+  bindChoices();
+  $('#routine-search').oninput=redraw;
+  $$('.group-chip').forEach(b=>b.onclick=()=>{activeGroup=b.dataset.group;redraw();});
+  $('#save-routine').onclick=()=>{const name=$('#routine-name').value.trim()||'Nueva rutina';const exercises=[...selected];if(!exercises.length){toast('Selecciona al menos un ejercicio');return;}state.routines.push({id:uid('r'),name,exercises});save();closeModal();render();};
 }
 function modal(html){const w=document.createElement('div');w.className='modal-wrap';w.id='modal-wrap';w.innerHTML=`<div class="modal">${html}</div>`;document.body.appendChild(w);w.onclick=e=>{if(e.target===w||e.target.matches('[data-close]'))closeModal();};}
 function closeModal(){ $('#modal-wrap')?.remove(); }
