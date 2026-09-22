@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { categories, conditions, popularBrands } from "@/lib/catalog";
 import { slugify } from "@/lib/format";
 import { getBrowserSupabase } from "@/lib/supabase";
+import { trackEvent } from "@/lib/analytics";
 import { OemCompatibilityPicker } from "@/components/OemCompatibilityPicker";
 import { DemandPreview } from "@/components/DemandPreview";
 import { PhotoAssistant } from "@/components/PhotoAssistant";
@@ -62,6 +63,7 @@ export default function PublishPage() {
       const { data: auth } = await supabase.auth.getSession();
       const user=auth.session?.user;
       if (!user) { router.replace("/login?next=/publicar"); return; }
+      void trackEvent("publish_started");
       let defaults: Partial<typeof form> = {};
       try { defaults = JSON.parse(localStorage.getItem("desguazalo:publish-defaults") || "{}"); } catch {}
       const query = new URLSearchParams(window.location.search);
@@ -227,6 +229,7 @@ export default function PublishPage() {
       }
 
       localStorage.setItem("desguazalo:publish-defaults", JSON.stringify({ brand:form.brand, model:form.model, generation:form.generation, year:form.year, engine:form.engine, location:form.location }));
+      await trackEvent("publish_completed", { targetId: listingId, metadata: { type } });
       router.push("/pieza/" + slug);
     } catch (caught) {
       for (const img of uploaded) await supabase.storage.from("listing-images").remove([img.path]);

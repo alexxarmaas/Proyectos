@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { MarketplaceResults } from "@/components/MarketplaceResults";
+import { ProductEventOnMount } from "@/components/ProductEventOnMount";
 import { NearbyControls } from "@/components/NearbyControls";
 import { SaveSearchButton } from "@/components/SaveSearchButton";
 import { SearchBar } from "@/components/SearchBar";
@@ -65,6 +66,14 @@ export default async function Marketplace({ searchParams }: { searchParams: Sear
 
   return (
     <div className="bg-[var(--dg-bg)]">
+      {(rawQuery || active.length > 0) && <ProductEventOnMount
+        name="search"
+        metadata={{
+          query: rawQuery.slice(0, 200),
+          filters: active.map(([key]) => String(key)).join(","),
+          results: listings.length
+        }}
+      />}
       <section className="relative overflow-hidden border-b border-[var(--dg-dark-soft)] bg-[var(--dg-dark)] text-white">
         <div className="race-grid-bg absolute inset-0 opacity-20" />
         <div className="relative mx-auto max-w-7xl px-4 py-9 sm:px-6 sm:py-11 lg:px-8">

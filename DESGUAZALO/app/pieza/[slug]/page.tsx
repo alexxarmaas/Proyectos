@@ -6,6 +6,8 @@ import { DonorInventory } from "@/components/DonorInventory";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { GarageCompatibility } from "@/components/GarageCompatibility";
 import { ReportButton } from "@/components/ReportButton";
+import { ProductEventOnMount } from "@/components/ProductEventOnMount";
+import { TrackedContactLink } from "@/components/TrackedContactLink";
 import { CopyReferenceButton, SellerRepeatButton, ShareActions } from "@/components/ShareActions";
 import { StatusBadge } from "@/components/StatusBadge";
 import { getListingBySlug, getListings, getOemCompatibilityKnowledge } from "@/lib/data";
@@ -46,6 +48,7 @@ export default async function ListingDetail({ params }: { params: Promise<{ slug
 
   return (
     <div className="shell detail-page">
+      <ProductEventOnMount name="listing_open" targetId={listing.id} metadata={{ type: listing.type, demo: Boolean(listing.is_demo) }} />
       <div className="breadcrumbs"><Link href="/">Inicio</Link><span>/</span><Link href="/marketplace">Marketplace</Link><span>/</span><span>{listing.title}</span></div>
       <div className="detail-grid">
         <section>
@@ -98,8 +101,8 @@ export default async function ListingDetail({ params }: { params: Promise<{ slug
           <Link href={"/vendedor/" + listing.seller_id} className="seller-row"><span className="seller-avatar">{listing.seller?.display_name?.[0] ?? "?"}</span><div><strong>{listing.seller?.display_name ?? "Vendedor"}{listing.seller?.seller_kind === "professional" ? " · profesional" : ""}{listing.is_demo ? " · demo" : ""}</strong><span>{listing.seller?.location ?? listing.location}</span></div><b>→</b></Link>
           <div className="contact-actions">
             {listing.is_demo ? <div className="no-contact">Sin contacto: anuncio de demostración.</div> : <>
-              {whatsapp && <a className="button button-whatsapp full" href={"https://wa.me/" + whatsapp + "?text=" + message} target="_blank" rel="noreferrer">WhatsApp</a>}
-              {listing.seller?.phone && <a className="button button-dark full" href={"tel:" + listing.seller.phone}>Llamar</a>}
+              {whatsapp && <TrackedContactLink className="button button-whatsapp full" href={"https://wa.me/" + whatsapp + "?text=" + message} eventName="contact_whatsapp" targetId={listing.id} target="_blank" rel="noreferrer">WhatsApp</TrackedContactLink>}
+              {listing.seller?.phone && <TrackedContactLink className="button button-dark full" href={"tel:" + listing.seller.phone} eventName="contact_phone" targetId={listing.id}>Llamar</TrackedContactLink>}
               {!whatsapp && !listing.seller?.phone && <div className="no-contact">El vendedor no ha añadido teléfono ni WhatsApp.</div>}
             </>}
           </div>

@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { popularBrands } from "@/lib/catalog";
 import { getBrowserSupabase } from "@/lib/supabase";
+import { trackEvent } from "@/lib/analytics";
 
 export default function RequestPartPage() {
   const router=useRouter(); const supabase=getBrowserSupabase();
@@ -12,7 +13,7 @@ export default function RequestPartPage() {
 
   useEffect(()=>{if(!supabase)return;void(async()=>{const query=new URLSearchParams(window.location.search);const {data:auth}=await supabase.auth.getUser();if(!auth.user){router.replace("/login?next="+encodeURIComponent("/solicitar?"+query.toString()));return;}const {data}=await supabase.from("profiles").select("location").eq("id",auth.user.id).single();setForm((prev)=>({...prev,title:query.get("title")||prev.title,brand:query.get("brand")||prev.brand,model:query.get("model")||prev.model,year:query.get("year")||prev.year,reference_code:query.get("oem")||prev.reference_code,location:query.get("location")||data?.location||prev.location}));})();},[router,supabase]);
 
-  async function submit(event:FormEvent){event.preventDefault();if(!supabase)return;setBusy(true);setError("");const {data:auth}=await supabase.auth.getUser();if(!auth.user)return;const {error:err}=await supabase.from("part_requests").insert({requester_id:auth.user.id,title:form.title.trim(),brand:form.brand.trim(),model:form.model.trim(),generation:form.generation.trim()||null,year:form.year?Number(form.year):null,engine:form.engine.trim()||null,reference_code:form.reference_code.trim()||null,location:form.location.trim(),notes:form.notes.trim()||null});if(err){setError(err.message);setBusy(false);return;}router.push("/se-busca");}
+  async function submit(event:FormEvent){event.preventDefault();if(!supabase)return;setBusy(true);setError("");const {data:auth}=await supabase.auth.getUser();if(!auth.user)return;const {error:err}=await supabase.from("part_requests").insert({requester_id:auth.user.id,title:form.title.trim(),brand:form.brand.trim(),model:form.model.trim(),generation:form.generation.trim()||null,year:form.year?Number(form.year):null,engine:form.engine.trim()||null,reference_code:form.reference_code.trim()||null,location:form.location.trim(),notes:form.notes.trim()||null});if(err){setError(err.message);setBusy(false);return;}await trackEvent("request_created",{metadata:{brand:form.brand.trim(),model:form.model.trim()}});router.push("/se-busca");}
 
   return <div className="publish-shell"><div className="shell narrow"><div className="publish-head"><span className="kicker">NO ESTÁ EN STOCK</span><h1>Publica lo que buscas</h1><p>La solicitud queda visible para vendedores que puedan tener esa pieza.</p></div><form className="publish-card stack-form" onSubmit={submit}>
     <label>¿Qué pieza necesitas?<input required value={form.title} onChange={(e)=>setForm({...form,title:e.target.value})} placeholder="Caja de cambios DSG"/></label>

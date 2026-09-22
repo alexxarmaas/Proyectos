@@ -4,6 +4,12 @@ import { getServerSupabase } from "./supabase";
 import type { Listing, MarketplaceFilters, OemCompatibilitySuggestion, PartRequest } from "./types";
 
 const listingSelect = "*, listing_images(public_url, position), listing_compatibilities(id, brand, model, generation, year_from, year_to, engine), donor_parts!donor_parts_vehicle_listing_id_fkey(id, vehicle_listing_id, seller_id, name, category, reference_code, price, status, notes, published_listing_id, position, created_at, updated_at, published_listing:listings!donor_parts_published_listing_id_fkey(slug, title)), seller:profiles!listings_seller_id_fkey(id, display_name, location, phone, whatsapp, avatar_url, seller_kind, created_at, last_active_at)";
+const DEMO_FILL_UNTIL = 20;
+const demoListingIds = new Set(demoListings.map((listing) => listing.id));
+
+function markDemoListing(row: Listing) {
+  return demoListingIds.has(row.id) ? { ...row, is_demo: true } : row;
+}
 
 function numericFilter(value?: string) {
   if (!value?.trim()) return undefined;
@@ -76,7 +82,7 @@ function filterDemoListings(filters: MarketplaceFilters = {}) {
 export async function getListings(filters: MarketplaceFilters = {}) {
   const supabase = getServerSupabase();
   if (!supabase) return filterDemoListings(filters);
-  const { count, error: countError } = await supabase.from("listings").select("id", { count: "exact", head: true }).eq("hidden", false);
+  const { count, error: countError } = await supabase.from("listings").select("id", { count: "exact", head: true }).eq("hidden", false).neq("status", "sold");
   if (countError || !count) return filterDemoListings(filters);
 
   const year = numericFilter(filters.year);
@@ -109,8 +115,13 @@ export async function getListings(filters: MarketplaceFilters = {}) {
   else query = query.order("created_at", { ascending: false });
 
   const { data, error } = await query.limit(hasGeo ? 300 : (filters.limit ?? 60));
-  if (error) return [];
-  let rows=(data ?? []) as unknown as Listing[];
+  if (error) return filterDemoListings(filters);
+  let rows=((data ?? []) as unknown as Listing[]).map(markDemoListing);
+  if (count < DEMO_FILL_UNTIL) {
+    const existing = new Set(rows.map((row) => row.id));
+    const demoRows = filterDemoListings({ ...filters, limit: filters.limit ?? 60 });
+    rows = [...rows, ...demoRows.filter((row) => !existing.has(row.id))];
+  }
   rows=applyDistance(rows,filters);
   if (filters.sort === "price_asc") rows.sort((a,b)=>(a.price??Number.MAX_SAFE_INTEGER)-(b.price??Number.MAX_SAFE_INTEGER));
   else if (filters.sort === "price_desc") rows.sort((a,b)=>(b.price??-1)-(a.price??-1));
@@ -124,7 +135,7 @@ export async function getListingBySlug(slug: string) {
   const supabase = getServerSupabase();
   if (!supabase) return demo;
   const { data } = await supabase.from("listings").select(listingSelect).eq("slug", slug).eq("hidden", false).maybeSingle();
-  return (data as unknown as Listing | null) ?? demo;
+  return data ? markDemoListing(data as unknown as Listing) : demo;
 }
 
 export async function getSellerListings(id: string) {
@@ -132,7 +143,7 @@ export async function getSellerListings(id: string) {
   const supabase = getServerSupabase();
   if (!supabase) return demo;
   const { data } = await supabase.from("listings").select(listingSelect).eq("seller_id", id).eq("hidden", false).order("created_at", { ascending: false });
-  if (data?.length) return data as unknown as Listing[];
+  if (data?.length) return (data as unknown as Listing[]).map(markDemoListing);
   return demo;
 }
 
