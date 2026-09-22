@@ -17,8 +17,6 @@ const exerciseCatalog = [
 ];
 const catalog = exerciseCatalog.flatMap(g=>g.exercises);
 
-const seed =
-
 const seed = {
   settings:{weeklyGoal:4, restSeconds:90},
   routines:[
