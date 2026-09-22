@@ -12,7 +12,6 @@ export function NotificationBell({userId}:{userId:string|null|undefined}){
     const client=getBrowserSupabase();
     if(!client)return;
     let active=true;
-    let timer:number|undefined;
 
     async function refresh(){
       const {count:unread}=await client!.from("notifications").select("id",{count:"exact",head:true}).eq("user_id",userId).is("read_at",null);
@@ -20,10 +19,10 @@ export function NotificationBell({userId}:{userId:string|null|undefined}){
     }
 
     void refresh();
-    timer=window.setInterval(()=>void refresh(),45000);
+    const timer=window.setInterval(()=>void refresh(),45000);
     const onFocus=()=>void refresh();
     window.addEventListener("focus",onFocus);
-    return()=>{active=false;if(timer)window.clearInterval(timer);window.removeEventListener("focus",onFocus);};
+    return()=>{active=false;window.clearInterval(timer);window.removeEventListener("focus",onFocus);};
   },[userId]);
 
   if(userId===undefined)return <span className="notification-bell notification-bell-placeholder" aria-hidden />;
