@@ -55,7 +55,7 @@ export default function SecurityPage() {
     setBusy(true);
     const { error: updateError } = await supabase.auth.updateUser({
       password,
-      currentPassword,
+      current_password: currentPassword,
     });
 
     if (updateError) {
