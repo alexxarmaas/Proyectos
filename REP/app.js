@@ -82,6 +82,60 @@ function bestSetText(name){
   return sets.map(s=>`${s.weight||0}×${s.reps||0}`).join(' · ');
 }
 
+function performanceScore(set){
+  const w=Number(set?.weight)||0, r=Number(set?.reps)||0;
+  if(!r) return 0;
+  return w>0 ? w*(1+r/30) : r;
+}
+function compareToPrevious(name,setIndex,set){
+  const prev=lastExerciseSets(name)?.[setIndex];
+  const hasCurrent=(Number(set?.reps)||0)>0;
+  if(!prev || !hasCurrent) return {state:'none',label:'',detail:''};
+  const a=performanceScore(set), b=performanceScore(prev);
+  if(!b) return {state:'none',label:'',detail:''};
+  const delta=(a-b)/b;
+  const currentText=`${Number(set.weight)||0}×${Number(set.reps)||0}`;
+  const prevText=`${Number(prev.weight)||0}×${Number(prev.reps)||0}`;
+  if(Math.abs(delta)<0.005) return {state:'same',label:'Igual',detail:`${currentText} = ${prevText}`};
+  if(delta>0) return {state:'up',label:'Mejora',detail:`${currentText} vs ${prevText}`};
+  return {state:'down',label:'Por debajo',detail:`${currentText} vs ${prevText}`};
+}
+function progressionTarget(name){
+  const sets=lastExerciseSets(name); if(!sets?.length) return null;
+  const weighted=sets.some(s=>(Number(s.weight)||0)>0);
+  if(weighted){
+    const maxWeight=Math.max(...sets.map(s=>Number(s.weight)||0));
+    const atWeight=sets.filter(s=>(Number(s.weight)||0)===maxWeight);
+    const bestReps=Math.max(...atWeight.map(s=>Number(s.reps)||0));
+    return {
+      weighted:true,
+      weight:maxWeight,
+      reps:bestReps+1,
+      text:`${maxWeight} kg × ${bestReps+1}`,
+      note:`+1 rep sobre tu mejor serie a ${maxWeight} kg`
+    };
+  }
+  const bestReps=Math.max(...sets.map(s=>Number(s.reps)||0));
+  return {weighted:false,reps:bestReps+1,text:`${bestReps+1} reps`,note:'+1 rep sobre tu mejor serie'};
+}
+function sessionComparisonStats(w=state.active){
+  if(!w) return {up:0,same:0,down:0,compared:0};
+  const out={up:0,same:0,down:0,compared:0};
+  w.exercises.forEach(e=>e.sets.forEach((s,si)=>{
+    if(!s.done) return;
+    const c=compareToPrevious(e.name,si,s);
+    if(c.state==='none') return;
+    out[c.state]++; out.compared++;
+  }));
+  return out;
+}
+function trendMarkup(name,si,set){
+  const c=compareToPrevious(name,si,set);
+  if(c.state==='none') return '<span class="set-trend empty-trend" aria-hidden="true">·</span>';
+  const icon=c.state==='up'?'↑':c.state==='same'?'=':'↓';
+  return `<span class="set-trend ${c.state}" title="${escapeAttr(c.detail)}" aria-label="${escapeAttr(c.label)}">${icon}</span>`;
+}
+
 function exerciseHistory(name){
   return state.workouts.map(w=>{
     const e=w.exercises.find(x=>x.name===name); if(!e) return null;
@@ -217,18 +271,21 @@ function defaultSets(name){
   return [1,2,3].map(()=>({weight:'',reps:'',done:false}));
 }
 function workoutView(){
-  const w=state.active;
+  const w=state.active, stats=sessionComparisonStats(w);
   return `<main class="app-shell">
-    <div class="workout-head"><div class="workout-title"><button class="icon-btn" id="cancel-workout">×</button><h1>${escapeHtml(w.name)}</h1><span class="timer" id="elapsed">00:00</span><button class="finish-btn" id="finish-workout">Terminar</button></div></div>
+    <div class="workout-head"><div class="workout-title"><button class="icon-btn" id="cancel-workout">×</button><h1>${escapeHtml(w.name)}</h1><span class="timer" id="elapsed">00:00</span><button class="finish-btn" id="finish-workout">Terminar</button></div>
+      ${stats.compared?`<div class="session-compare"><span>vs última sesión</span><b class="cmp-up">↑ ${stats.up}</b><b class="cmp-same">= ${stats.same}</b><b class="cmp-down">↓ ${stats.down}</b></div>`:''}
+    </div>
     ${w.exercises.length?w.exercises.map((e,ei)=>exerciseBlock(e,ei)).join(''):`<div class="empty">Añade tu primer ejercicio.</div>`}
     <button class="primary mt12" id="add-exercise">+ Añadir ejercicio</button>
   </main>${restUntil?restBar():''}`;
 }
 function exerciseBlock(e,ei){
-  const complete=exerciseDone(e);
-  return `<section class="exercise ${complete?'exercise-complete':''}"><div class="exercise-head"><div class="card-row"><div><div class="exercise-title-row"><h3>${escapeHtml(e.name)}</h3>${complete?'<span class="done-badge">Completado</span>':''}${isCurrentPR(e)?'<span class="pr-badge">PR</span>':''}</div><div class="last">${escapeHtml(groupForExercise(e.name))} · Última vez: ${escapeHtml(bestSetText(e.name))}</div></div><div class="exercise-tools"><button class="mini-icon" data-move-up="${ei}" ${ei===0?'disabled':''}>↑</button><button class="mini-icon" data-move-down="${ei}" ${ei===state.active.exercises.length-1?'disabled':''}>↓</button><button class="mini-icon danger-icon" data-remove-ex="${ei}">×</button></div></div></div>
+  const complete=exerciseDone(e), target=progressionTarget(e.name);
+  return `<section class="exercise ${complete?'exercise-complete':''}"><div class="exercise-head"><div class="card-row"><div><div class="exercise-title-row"><h3>${escapeHtml(e.name)}</h3>${complete?'<span class="done-badge">Completado</span>':''}${isCurrentPR(e)?'<span class="pr-badge">PR</span>':''}</div><div class="last">${escapeHtml(groupForExercise(e.name))} · Última vez: ${escapeHtml(bestSetText(e.name))}</div></div><div class="exercise-tools"><button class="mini-icon" data-move-up="${ei}" ${ei===0?'disabled':''}>↑</button><button class="mini-icon" data-move-down="${ei}" ${ei===state.active.exercises.length-1?'disabled':''}>↓</button><button class="mini-icon danger-icon" data-remove-ex="${ei}">×</button></div></div>
+    ${target?`<div class="progression-target"><span>🎯 Próximo paso</span><strong>${escapeHtml(target.text)}</strong><small>${escapeHtml(target.note)}</small></div>`:''}</div>
     <div class="set-head"><span>Set</span><span>kg</span><span>reps</span><span></span><span>✓</span></div>
-    ${e.sets.map((s,si)=>`<div class="set-row ${s.done?'set-done':''}"><div class="set-num">${si+1}</div><input class="set-input" inputmode="decimal" type="number" step="0.5" placeholder="kg" value="${s.weight}" data-weight="${ei}:${si}"><input class="set-input" inputmode="numeric" type="number" step="1" placeholder="reps" value="${s.reps}" data-reps="${ei}:${si}"><button class="set-delete" data-delset="${ei}:${si}" aria-label="Borrar serie">−</button><button class="check ${s.done?'done':''}" data-done="${ei}:${si}">${s.done?'✓':'○'}</button></div>`).join('')}
+    ${e.sets.map((s,si)=>`<div class="set-row ${s.done?'set-done':''}"><div class="set-num"><b>${si+1}</b><span data-set-trend="${ei}:${si}">${trendMarkup(e.name,si,s)}</span></div><input class="set-input" inputmode="decimal" type="number" step="0.5" placeholder="kg" value="${s.weight}" data-weight="${ei}:${si}"><input class="set-input" inputmode="numeric" type="number" step="1" placeholder="reps" value="${s.reps}" data-reps="${ei}:${si}"><button class="set-delete" data-delset="${ei}:${si}" aria-label="Borrar serie">−</button><button class="check ${s.done?'done':''}" data-done="${ei}:${si}">${s.done?'✓':'○'}</button></div>`).join('')}
     <div class="exercise-actions"><button class="secondary" data-addset="${ei}">+ Serie</button><button class="secondary" data-prefill="${ei}">Copiar anterior</button></div>
   </section>`;
 }
@@ -243,9 +300,9 @@ function bindCommon(){
   $$('[data-view]').forEach(b=>b.onclick=()=>{view=b.dataset.view;render();});
   $$('[data-start]').forEach(b=>b.onclick=()=>startRoutine(b.dataset.start));
   $('#new-routine')?.addEventListener('click',()=>openRoutineModal());
-  $('[data-routine-menu]').forEach(b=>b.onclick=()=>openRoutineActions(b.dataset.routineMenu));
+  $$('[data-routine-menu]').forEach(b=>b.onclick=()=>openRoutineActions(b.dataset.routineMenu));
   $('#progress-exercise')?.addEventListener('change',e=>{state.settings.progressExercise=e.target.value;save();render();});
-  $('[data-workout-detail]').forEach(b=>b.onclick=()=>openWorkoutDetail(b.dataset.workoutDetail));
+  $$('[data-workout-detail]').forEach(b=>b.onclick=()=>openWorkoutDetail(b.dataset.workoutDetail));
   $('#free-workout')?.addEventListener('click',()=>startRoutine(null));
   $('#save-settings')?.addEventListener('click',()=>{state.settings.weeklyGoal=clamp(+$('#goal').value,1,7);state.settings.restSeconds=clamp(+$('#rest').value,15,600);save();toast('Ajustes guardados');render();});
   $('#export')?.addEventListener('click',exportData);
@@ -274,7 +331,13 @@ function bindWorkout(){
   $('#rest-skip')?.addEventListener('click',()=>{stopRest();render();});
   startRestTick();
 }
-function updateSet(key,field,value){const [ei,si]=key.split(':').map(Number);state.active.exercises[ei].sets[si][field]=value;save();}
+function updateSet(key,field,value){
+  const [ei,si]=key.split(':').map(Number);
+  const e=state.active.exercises[ei], s=e.sets[si];
+  s[field]=value; save();
+  const host=document.querySelector(`[data-set-trend="${key}"]`);
+  if(host) host.innerHTML=trendMarkup(e.name,si,s);
+}
 function deleteSet(key){
   const [ei,si]=key.split(':').map(Number); const e=state.active.exercises[ei];
   if(e.sets.length===1){toast('Un ejercicio debe tener al menos una serie');return;}
@@ -292,9 +355,10 @@ function toggleDone(key){
 }
 function removeExercise(ei){if(confirm(`¿Quitar ${state.active.exercises[ei].name}?`)){state.active.exercises.splice(ei,1);save();render();}}
 function finishWorkout(){
-  const w=state.active; const done=completedSets(w); const prs=w.exercises.filter(isCurrentPR).length;
+  const w=state.active; const done=completedSets(w); const prs=w.exercises.filter(isCurrentPR).length; const cmp=sessionComparisonStats(w);
   if(!done && !confirm('No has marcado ninguna serie como hecha. ¿Terminar igualmente?')) return;
-  w.finishedAt=Date.now(); state.workouts.push(w); state.active=null; restUntil=null; stopRest(); clearInterval(elapsedInterval); elapsedInterval=null; save(); view='home'; render(); toast(`Entrenamiento guardado · ${done} series${prs?` · 🏆 ${prs} PR${prs>1?'s':''}`:''}`);
+  w.finishedAt=Date.now(); state.workouts.push(w); state.active=null; restUntil=null; stopRest(); clearInterval(elapsedInterval); elapsedInterval=null; save(); view='home'; render();
+  toast(`Guardado · ${done} series${cmp.up?` · ↑ ${cmp.up} mejoradas`:''}${prs?` · 🏆 ${prs} PR${prs>1?'s':''}`:''}`);
 }
 function updateRestUi(){
   const left=restSecondsLeft();

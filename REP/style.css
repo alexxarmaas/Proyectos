@@ -92,3 +92,20 @@ button{color:inherit}
 .data-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.data-actions .danger{grid-column:1/-1}
 .workout-detail-head{display:flex;justify-content:space-between;gap:12px;align-items:start}.workout-detail-head h2{margin-top:5px}.detail-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}.detail-stats span{background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:12px;color:var(--muted);font-size:11px}.detail-stats strong{display:block;color:var(--text);font-size:20px}.detail-exercise{padding:12px 0;border-bottom:1px solid var(--line)}.detail-exercise>div{display:flex;justify-content:space-between;gap:8px}.detail-exercise small{color:var(--muted)}.detail-exercise>span{display:block;color:var(--muted);font-size:12px;margin-top:5px;line-height:1.4}
 @media(max-width:390px){.routine-card{gap:9px}.routine-actions{gap:4px}.start-small{padding:10px 11px}.routine-more{width:33px}}
+
+/* REP v0.4 — progressive overload cues */
+.progression-target{display:grid;grid-template-columns:auto 1fr;column-gap:8px;row-gap:2px;align-items:center;margin-top:12px;padding:10px 11px;border-radius:14px;background:rgba(167,255,79,.07);border:1px solid rgba(167,255,79,.16)}
+.progression-target>span{font-size:11px;color:var(--muted);font-weight:850;text-transform:uppercase;letter-spacing:.04em}
+.progression-target strong{justify-self:end;font-size:14px;color:var(--accent)}
+.progression-target small{grid-column:1/-1;color:var(--muted);font-size:11px}
+.set-num{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.set-num b{font-size:13px}
+.set-trend{display:inline-grid;place-items:center;min-width:16px;height:16px;border-radius:999px;font-size:10px;font-weight:950;line-height:1}
+.set-trend.up{color:#0b0e07;background:var(--accent)}
+.set-trend.same{color:#dce1e8;background:#343a45}
+.set-trend.down{color:#ffd0d0;background:#54252a}
+.empty-trend{opacity:.2;background:transparent;color:var(--muted)}
+.session-compare{display:flex;align-items:center;gap:9px;margin-top:8px;padding-left:52px;color:var(--muted);font-size:11px}
+.session-compare span{margin-right:auto}
+.session-compare b{font-size:11px}.cmp-up{color:var(--accent)}.cmp-same{color:#dce1e8}.cmp-down{color:#ff9999}
+@media(max-width:390px){.session-compare{padding-left:0}.progression-target{grid-template-columns:1fr auto}}
