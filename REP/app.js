@@ -96,7 +96,7 @@ function save(touch=true){
   }
   try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{}
   persistShadow();
-  if(cloudReady&&!suppressCloud) scheduleCloudSync();
+  if(touch&&cloudReady&&!suppressCloud) scheduleCloudSync();
 }
 function scheduleCloudSync(){
   clearTimeout(syncTimer);
@@ -434,7 +434,7 @@ function bindCommon(){
   $('#new-routine')?.addEventListener('click',()=>openRoutineModal());
   $$('[data-routine-menu]').forEach(b=>b.onclick=()=>openRoutineActions(b.dataset.routineMenu));
   $('#progress-exercise')?.addEventListener('change',e=>{state.settings.progressExercise=e.target.value;save();render();});
-  $('#history-search')?.addEventListener('input',e=>{historyQuery=e.target.value;render();});
+  $('#history-search')?.addEventListener('change',e=>{historyQuery=e.target.value;render();});
   $('#history-range')?.addEventListener('change',e=>{historyRange=e.target.value;render();});
   $$('[data-workout-detail]').forEach(b=>b.onclick=()=>openWorkoutDetail(b.dataset.workoutDetail));
   $('#free-workout')?.addEventListener('click',()=>startRoutine(null));
