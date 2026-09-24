@@ -2,7 +2,7 @@ const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
 
 const STORAGE_KEY = 'rep-gym-mvp-v1';
-const APP_VERSION = '1.1.0-beta.1';
+const APP_VERSION = '1.2.0-beta.1';
 const APP_NAME = 'REP';
 let deferredInstallPrompt = null;
 const exerciseCatalog = [
@@ -48,6 +48,7 @@ let cloudReady=false;
 let suppressCloud=false;
 let historyQuery='';
 let historyRange='all';
+let openRirKey=null;
 
 function migrateState(input){
   const parsed=input&&typeof input==='object'?structuredClone(input):{};
@@ -317,34 +318,51 @@ function nav(){
   const items=[['home','home','Inicio'],['routines','routines','Rutinas'],['progress','progress','Progreso'],['settings','settings','Ajustes']];
   return `<nav class="nav-shell"><div class="nav">${items.map(([id,ic,t])=>`<button data-view="${id}" class="${view===id?'active':''}">${icon(ic,21)}<span>${t}</span></button>`).join('')}</div></nav>`;
 }
+
+function suggestedRoutine(){
+  if(!state.routines.length)return null;
+  const lastUsed=new Map();
+  state.workouts.forEach(w=>lastUsed.set(w.name,w.finishedAt||0));
+  return [...state.routines].sort((a,b)=>(lastUsed.get(a.name)||0)-(lastUsed.get(b.name)||0))[0];
+}
+function recordHighlights(){
+  return allLoggedExercises().map(name=>{
+    const h=exerciseHistory(name); if(!h.length)return null;
+    const weighted=h.some(x=>x.weighted);
+    const best=weighted?Math.max(...h.map(x=>x.maxWeight)):Math.max(...h.map(x=>x.maxReps));
+    const latest=Math.max(...h.filter(x=>(weighted?x.maxWeight:x.maxReps)===best).map(x=>x.date));
+    return {name,value:best,unit:weighted?'kg':'reps',date:latest};
+  }).filter(Boolean).sort((a,b)=>b.date-a.date);
+}
+
 function homeView(){
   const wk=workoutsThisWeek().length, goal=state.settings.weeklyGoal;
   const days=['L','M','X','J','V','S','D'], today=isoDay(), streak=activeWeekStreak();
-  const last=state.workouts.at(-1), featured=state.routines[0], pct=Math.min(100,Math.round(wk/goal*100));
+  const last=state.workouts.at(-1), featured=suggestedRoutine(), pct=Math.min(100,Math.round(wk/goal*100));
+  const nextTarget=featured?.exercises.map(name=>({name,target:progressionTarget(name)})).find(x=>x.target);
   return `
-    <section class="home-hero">
-      <div class="hero-kicker">TU SEMANA · ${wk}/${goal}</div>
-      <h1>Haz que cada<br><span>serie cuente.</span></h1>
-      <p>Entra, supera tu última sesión y sal. REP se encarga del resto.</p>
-      ${featured?`<button class="hero-cta" data-start="${featured.id}"><span class="hero-play">${icon('play',19)}</span><span><b>Empezar ahora</b><small>${escapeHtml(featured.name)} · ${featured.exercises.length} ejercicios</small></span><span class="hero-arrow">${icon('chevron',18)}</span></button>`:''}
-      <div class="hero-metrics">
-        <div><span class="metric-icon">${icon('flame',18)}</span><b>${streak}</b><small>semanas activo</small></div>
-        <div><span class="metric-icon">${icon('target',18)}</span><b>${pct}%</b><small>objetivo semanal</small></div>
+    <section class="home-hero home-hero-v3">
+      <div class="hero-status-row"><div><span class="hero-kicker">REP · HOY</span><span class="hero-state">${wk>=goal?'Objetivo semanal cumplido':'Sesión lista cuando tú lo estés'}</span></div><div class="week-ring" style="--pct:${pct*3.6}deg"><div><b>${wk}</b><span>/${goal}</span></div></div></div>
+      <h1>Tu siguiente<br><span>buena sesión.</span></h1>
+      ${featured?`<div class="next-workout-card"><div class="next-workout-label">RECOMENDADA</div><div class="next-workout-row"><div><h3>${escapeHtml(featured.name)}</h3><p>${featured.exercises.length} ejercicios${nextTarget?` · objetivo: ${escapeHtml(nextTarget.target.text)}`:''}</p></div><button data-start="${featured.id}">${icon('play',20)}</button></div></div>`:''}
+      <div class="hero-metrics hero-metrics-v3">
+        <div><span class="metric-icon">${icon('flame',18)}</span><b>${streak}</b><small>racha semanal</small></div>
+        <div><span class="metric-icon">${icon('target',18)}</span><b>${pct}%</b><small>objetivo</small></div>
       </div>
     </section>
 
-    <section class="week-card">
-      <div class="week-card-head"><div><span>ESTA SEMANA</span><strong>${wk>=goal?'Objetivo completado':'Sigue construyendo'}</strong></div><b>${wk}/${goal}</b></div>
+    <section class="week-card week-card-v3">
+      <div class="week-card-head"><div><span>CONSISTENCIA</span><strong>${wk>=goal?'Semana cerrada':'Suma una sesión más'}</strong></div><b>${wk}/${goal}</b></div>
       <div class="week-v2">${weekDays().map((d,i)=>`<div class="${hasWorkoutOn(d)?'done':''} ${isoDay(d)===today?'today':''}"><span>${days[i]}</span><b>${hasWorkoutOn(d)?'✓':new Date(d).getDate()}</b></div>`).join('')}</div>
       <div class="progress-line"><span style="width:${pct}%"></span></div>
     </section>
 
     ${todayGoalsHtml()}
 
-    <div class="section-title premium-title"><div><span>RUTINAS</span><h2>Listo para entrenar</h2></div><button class="link-btn" data-view="routines">Ver todas ${icon('chevron',14)}</button></div>
+    <div class="section-title premium-title"><div><span>RUTINAS</span><h2>Entrena sin pensar de más</h2></div><button class="link-btn" data-view="routines">Ver todas ${icon('chevron',14)}</button></div>
     <div class="routine-stack">${state.routines.slice(0,3).map(r=>routineCard(r)).join('')}</div>
 
-    ${last?`<div class="section-title premium-title"><div><span>ÚLTIMA ACTIVIDAD</span><h2>Tu sesión anterior</h2></div></div>
+    ${last?`<div class="section-title premium-title"><div><span>ÚLTIMA ACTIVIDAD</span><h2>Donde lo dejaste</h2></div></div>
       <button class="last-session-card" data-view="progress"><div class="last-session-date"><b>${new Date(last.finishedAt).getDate()}</b><span>${new Intl.DateTimeFormat('es-ES',{month:'short'}).format(new Date(last.finishedAt))}</span></div><div class="last-session-main"><b>${escapeHtml(last.name)}</b><span>${workingSetsCount(last)} series · ${mins(last.finishedAt-last.startedAt)} min · ${Math.round(volume(last)).toLocaleString('es-ES')} kg</span></div><div class="last-session-arrow">${icon('chevron',18)}</div></button>`:''}
   `;
 }
@@ -387,32 +405,28 @@ function progressView(){
   if(!selected||!exercises.includes(selected))selected=exercises[0]||'';
   const series=selected?progressSeries(selected):{weighted:true,points:[]};
   const latest=series.points.at(-1),prev=series.points.at(-2);
-  const diff=latest&&prev?latest.value-prev.value:null;
-  const unit=series.weighted?'kg':'reps';
-  const recent=filteredWorkouts();
-  const days30=Date.now()-30*86400000;
-  const last30=state.workouts.filter(w=>w.finishedAt>=days30);
-  const totalVol=Math.round(last30.reduce((a,w)=>a+volume(w),0));
-  const totalSets=last30.reduce((a,w)=>a+workingSetsCount(w),0);
-  return `<div class="eyebrow">Progreso</div><h1 class="hero-title">Tu evolución</h1>
-    <p class="subtle">Carga, sesiones y rendimiento sin convertir el entrenamiento en una hoja de cálculo.</p>
-    <div class="stats-3">
-      <div class="stat"><strong>${state.workouts.length}</strong><small>sesiones</small></div>
-      <div class="stat"><strong>${totalVol.toLocaleString('es-ES')}</strong><small>kg · 30 días</small></div>
-      <div class="stat"><strong>${totalSets}</strong><small>series · 30 días</small></div>
+  const diff=latest&&prev?latest.value-prev.value:null, unit=series.weighted?'kg':'reps';
+  const recent=filteredWorkouts(), records=recordHighlights().slice(0,4);
+  const days30=Date.now()-30*86400000, last30=state.workouts.filter(w=>w.finishedAt>=days30);
+  const totalVol=Math.round(last30.reduce((a,w)=>a+volume(w),0)), totalSets=last30.reduce((a,w)=>a+workingSetsCount(w),0);
+  return `<header class="page-head progress-page-head"><div><span class="eyebrow">PROGRESO</span><h1>Más fuerte,<br>sesión a sesión.</h1><p>Lo importante, sin enterrarte en gráficas.</p></div></header>
+    <div class="progress-overview">
+      <div><span>SESIONES</span><b>${state.workouts.length}</b><small>total</small></div>
+      <div><span>30 DÍAS</span><b>${totalVol.toLocaleString('es-ES')}</b><small>kg movidos</small></div>
+      <div><span>TRABAJO</span><b>${totalSets}</b><small>series / 30d</small></div>
     </div>
-    ${exercises.length?`<div class="card progress-card">
-      <div class="form-group progress-select-wrap"><label>EJERCICIO</label><select class="form-input" id="progress-exercise">${exercises.map(x=>`<option value="${escapeAttr(x)}" ${x===selected?'selected':''}>${escapeHtml(x)}</option>`).join('')}</select></div>
-      <div class="progress-head"><div><div class="eyebrow">${series.weighted?'Mejor peso':'Mejores repeticiones'}</div><strong>${latest?latest.value:'—'} ${latest?unit:''}</strong></div>${diff!==null?`<span class="trend ${diff>0?'up':diff<0?'down':'flat'}">${diff>0?'+':''}${diff} ${unit}</span>`:''}</div>
+    ${exercises.length?`<section class="progress-focus">
+      <div class="progress-focus-top"><div><span>SEGUIMIENTO</span><h2>${escapeHtml(selected)}</h2></div><select id="progress-exercise">${exercises.map(x=>`<option value="${escapeAttr(x)}" ${x===selected?'selected':''}>${escapeHtml(x)}</option>`).join('')}</select></div>
+      <div class="progress-number"><div><strong>${latest?latest.value:'—'}</strong><span>${latest?unit:''}</span></div>${diff!==null?`<b class="trend ${diff>0?'up':diff<0?'down':'flat'}">${diff>0?'↑':'↓'} ${Math.abs(diff)} ${unit}</b>`:''}</div>
       ${sparkline(series.points.slice(-12))}
       <div class="chart-axis"><span>${series.points.length?prettyDate(series.points[Math.max(0,series.points.length-12)].date):''}</span><span>${latest?prettyDate(latest.date):''}</span></div>
-      <div class="progress-history">${exerciseHistory(selected).slice(-5).reverse().map(h=>`<div><span>${prettyDate(h.date)}</span><strong>${h.weighted?`${h.maxWeight} kg × ${h.maxReps}`:`${h.maxReps} reps`}</strong></div>`).join('')}</div>
-    </div>`:`<div class="empty">Termina una sesión y aquí aparecerá tu evolución.</div>`}
-    <div class="section-title"><h2>Historial</h2><span class="subtle small">${recent.length} sesiones</span></div>
+      <div class="progress-history compact-history">${exerciseHistory(selected).slice(-4).reverse().map(h=>`<div><span>${prettyDate(h.date)}</span><strong>${h.weighted?`${h.maxWeight} kg × ${h.maxReps}`:`${h.maxReps} reps`}</strong></div>`).join('')}</div>
+    </section>`:`<div class="empty-state progress-empty"><div>${icon('progress',28)}</div><b>Aquí aparecerá tu progreso</b><span>Completa tu primera sesión para empezar a ver tendencias.</span></div>`}
+    ${records.length?`<div class="section-title premium-title"><div><span>MARCA PERSONAL</span><h2>Tus mejores números</h2></div></div><div class="records-row">${records.map(r=>`<div class="record-card"><span>PR</span><b>${r.value}<small>${r.unit}</small></b><p>${escapeHtml(r.name)}</p></div>`).join('')}</div>`:''}
+    <div class="section-title premium-title"><div><span>HISTORIAL</span><h2>Tus entrenamientos</h2></div><span class="subtle small">${recent.length}</span></div>
     <div class="history-filters"><input class="form-input" id="history-search" placeholder="Buscar rutina o ejercicio…" value="${escapeAttr(historyQuery)}"><select class="form-input" id="history-range"><option value="all" ${historyRange==='all'?'selected':''}>Todo</option><option value="30" ${historyRange==='30'?'selected':''}>30 días</option><option value="90" ${historyRange==='90'?'selected':''}>90 días</option><option value="365" ${historyRange==='365'?'selected':''}>1 año</option></select></div>
-    ${recent.length?recent.map(w=>`<button class="card history-item history-button" data-workout-detail="${w.id}"><div class="datebox"><strong>${new Date(w.finishedAt).getDate()}</strong>${new Intl.DateTimeFormat('es-ES',{month:'short'}).format(new Date(w.finishedAt))}</div><div><h3>${escapeHtml(w.name)}</h3><div class="meta">${workingSetsCount(w)} trabajo · ${mins(w.finishedAt-w.startedAt)} min · ${Math.round(volume(w)).toLocaleString('es-ES')} kg</div></div><span>›</span></button>`).join(''):'<div class="empty">No hay sesiones que coincidan.</div>'}`;
+    <div class="history-list">${recent.length?recent.map(w=>`<button class="history-card-v2" data-workout-detail="${w.id}"><div class="history-date-v2"><b>${new Date(w.finishedAt).getDate()}</b><span>${new Intl.DateTimeFormat('es-ES',{month:'short'}).format(new Date(w.finishedAt))}</span></div><div><strong>${escapeHtml(w.name)}</strong><span>${workingSetsCount(w)} series · ${mins(w.finishedAt-w.startedAt)} min</span></div><b>${Math.round(volume(w)).toLocaleString('es-ES')}<small> kg</small></b></button>`).join(''):'<div class="empty">No hay sesiones que coincidan.</div>'}</div>`;
 }
-
 function cloudSettingsHtml(){
   const cloud=window.REPCloud;
   if(!cloud?.isConfigured?.())return `<div class="card"><div class="card-row"><div><h3>Nube REP</h3><p class="subtle mb0">La app está preparada para cuenta y sincronización. Falta activar el proyecto cloud.</p></div><span class="pill">local</span></div></div>`;
@@ -476,12 +490,13 @@ function exerciseBlock(e,ei){
     ${target?`<div class="target-card"><div class="target-icon">${icon('target',18)}</div><div><span>OBJETIVO DE HOY</span><b>${escapeHtml(target.text)}</b><small>${escapeHtml(target.note)}</small></div></div>`:''}
     <div class="set-table">
       <div class="set-head-v2"><span>SERIE</span><span>PESO</span><span>REPS</span><span></span></div>
-      ${e.sets.map((raw,si)=>{const s=normalizeSet(raw);return `<div class="set-line ${s.done?'done':''} ${s.type==='warmup'?'warmup':''}">
-        <div class="set-id"><b>${si+1}</b><span data-set-trend="${ei}:${si}">${trendMarkup(e.name,si,s)}</span></div>
-        <div class="metric-input"><input inputmode="decimal" type="number" step="0.5" placeholder="0" value="${s.weight}" data-weight="${ei}:${si}"><span>kg</span></div>
-        <div class="metric-input"><input inputmode="numeric" type="number" step="1" placeholder="0" value="${s.reps}" data-reps="${ei}:${si}"><span>rep</span></div>
-        <button class="set-check-v2 ${s.done?'done':''}" data-done="${ei}:${si}">${s.done?'✓':''}</button>
-        <div class="set-tags"><button class="set-type type-${s.type}" data-type="${ei}:${si}">${setTypeLabel(s.type)}</button><button class="rir-chip ${s.rir!==null?'has-rir':''}" data-rir="${ei}:${si}">RIR ${s.rir===null?'—':s.rir}</button><button class="delete-set-link" data-delset="${ei}:${si}">Eliminar</button></div>
+      ${e.sets.map((raw,si)=>{const s=normalizeSet(raw), key=`${ei}:${si}`;return `<div class="set-line ${s.done?'done':''} ${s.type==='warmup'?'warmup':''}">
+        <div class="set-id"><b>${si+1}</b><span data-set-trend="${key}">${trendMarkup(e.name,si,s)}</span></div>
+        <div class="metric-input"><input inputmode="decimal" type="number" step="0.5" placeholder="0" value="${s.weight}" data-weight="${key}"><span>kg</span></div>
+        <div class="metric-input"><input inputmode="numeric" type="number" step="1" placeholder="0" value="${s.reps}" data-reps="${key}"><span>rep</span></div>
+        <button class="set-check-v2 ${s.done?'done':''}" data-done="${key}">${s.done?'✓':''}</button>
+        <div class="set-tags"><button class="set-type type-${s.type}" data-type="${key}">${setTypeLabel(s.type)}</button><button class="rir-chip ${s.rir!==null?'has-rir':''}" data-rir-open="${key}">RIR ${s.rir===null?'—':s.rir}</button><button class="quick-bump" data-bump-weight="${key}">+${pref.increment} kg</button><button class="quick-bump" data-bump-reps="${key}">+1 rep</button><button class="delete-set-link" data-delset="${key}">Eliminar</button></div>
+        ${openRirKey===key?`<div class="rir-picker"><span>RIR</span>${[4,3,2,1,0].map(v=>`<button data-set-rir="${key}" data-rir-value="${v}" class="${s.rir===v?'active':''}">${v}</button>`).join('')}<button data-set-rir="${key}" data-rir-value="" class="${s.rir===null?'active':''}">—</button></div>`:''}
       </div>`}).join('')}
     </div>
     <div class="exercise-footer"><button data-addset="${ei}">${icon('plus',15)} Añadir serie</button><button data-prefill="${ei}">Repetir anterior</button><div class="reorder"><button data-move-up="${ei}" ${ei===0?'disabled':''}>↑</button><button data-move-down="${ei}" ${ei===state.active.exercises.length-1?'disabled':''}>↓</button></div></div>
@@ -530,7 +545,10 @@ function bindWorkout(){
   $$('[data-addset]').forEach(b=>b.onclick=()=>{const e=state.active.exercises[+b.dataset.addset];const prev=normalizeSet(e.sets.at(-1)||{});e.sets.push({weight:prev.weight||'',reps:prev.reps||'',done:false,type:prev.type||'normal',rir:null});save();render();});
   $$('[data-delset]').forEach(b=>b.onclick=()=>deleteSet(b.dataset.delset));
   $$('[data-type]').forEach(b=>b.onclick=()=>cycleSetType(b.dataset.type));
-  $$('[data-rir]').forEach(b=>b.onclick=()=>cycleRir(b.dataset.rir));
+  $$('[data-rir-open]').forEach(b=>b.onclick=()=>{openRirKey=openRirKey===b.dataset.rirOpen?null:b.dataset.rirOpen;renderPreserveScroll();});
+  $$('[data-set-rir]').forEach(b=>b.onclick=()=>setRir(b.dataset.setRir,b.dataset.rirValue));
+  $$('[data-bump-weight]').forEach(b=>b.onclick=()=>bumpSet(b.dataset.bumpWeight,'weight'));
+  $$('[data-bump-reps]').forEach(b=>b.onclick=()=>bumpSet(b.dataset.bumpReps,'reps'));
   $$('[data-prefill]').forEach(b=>b.onclick=()=>{const e=state.active.exercises[+b.dataset.prefill];const last=lastExerciseSets(e.name);if(last?.length)e.sets=last.map(s=>({weight:s.weight,reps:s.reps,done:false,type:s.type||'normal',rir:null}));else toast('Todavía no hay una sesión anterior');save();render();});
   $$('[data-ex-settings]').forEach(b=>b.onclick=()=>openExerciseSettings(+b.dataset.exSettings));
   $$('[data-replace-ex]').forEach(b=>b.onclick=()=>openExerciseModal(+b.dataset.replaceEx));
@@ -557,10 +575,20 @@ function cycleSetType(key){
   const order=['normal','top','warmup']; const cur=s.type||'normal';
   s.type=order[(order.indexOf(cur)+1)%order.length]; save(); render();
 }
-function cycleRir(key){
+function renderPreserveScroll(){
+  const y=window.scrollY; render(); requestAnimationFrame(()=>window.scrollTo(0,y));
+}
+function setRir(key,value){
   const [ei,si]=key.split(':').map(Number), s=state.active.exercises[ei].sets[si];
-  const order=[null,4,3,2,1,0], idx=order.indexOf(s.rir??null);
-  s.rir=order[(idx+1)%order.length]; save(); render();
+  s.rir=value===''?null:Number(value); openRirKey=null; save(); renderPreserveScroll();
+}
+function bumpSet(key,field){
+  const [ei,si]=key.split(':').map(Number), e=state.active.exercises[ei], s=e.sets[si], pref=exercisePref(e.name);
+  const delta=field==='weight'?Number(pref.increment||2.5):1;
+  const current=Number(s[field])||0, next=Math.round((current+delta)*100)/100;
+  s[field]=String(next); save();
+  if(navigator.vibrate)navigator.vibrate(12);
+  renderPreserveScroll();
 }
 function avgRir(w){
   const vals=w.exercises.flatMap(e=>e.sets).filter(s=>s.done&&isWorkingSet(s)&&s.rir!==null&&s.rir!==undefined).map(s=>Number(s.rir));
@@ -579,7 +607,7 @@ function toggleDone(key){
   const [ei,si]=key.split(':').map(Number); const s=state.active.exercises[ei].sets[si];
   s.done=!s.done; save();
   if(s.done){restUntil=Date.now()+state.settings.restSeconds*1000; if(navigator.vibrate) navigator.vibrate(30);} else restUntil=null;
-  render();
+  renderPreserveScroll();
 }
 function removeExercise(ei){if(confirm(`¿Quitar ${state.active.exercises[ei].name}?`)){state.active.exercises.splice(ei,1);save();render();}}
 function finishWorkout(){
@@ -587,13 +615,21 @@ function finishWorkout(){
   if(!done && !confirm('No has marcado ninguna serie como hecha. ¿Terminar igualmente?')) return;
   const prs=w.exercises.filter(isCurrentPR).length, cmp=sessionComparisonStats(w), rir=avgRir(w);
   const best=w.exercises.map(e=>({name:e.name,up:e.sets.filter((s,si)=>s.done&&compareToPrevious(e.name,si,s).state==='up').length})).sort((a,b)=>b.up-a.up)[0];
-  modal(`<div class="finish-summary"><div class="finish-hero"><div class="finish-check">✓</div><div><div class="eyebrow">Entrenamiento listo</div><h2>${escapeHtml(w.name)}</h2></div></div>
-    <div class="summary-grid"><div><strong>${mins(Date.now()-w.startedAt)}</strong><span>min</span></div><div><strong>${workingSetsCount(w)}</strong><span>series trabajo</span></div><div><strong>${Math.round(volume(w)).toLocaleString('es-ES')}</strong><span>kg volumen</span></div><div><strong>${rir===null?'—':rir.toFixed(1)}</strong><span>RIR medio</span></div></div>
-    <div class="summary-highlights">${cmp.up?`<div><span>↑</span><p><b>${cmp.up} series mejoradas</b><small>frente a la sesión anterior</small></p></div>`:''}${prs?`<div><span>🏆</span><p><b>${prs} PR${prs>1?'s':''}</b><small>nuevo máximo de peso</small></p></div>`:''}${best?.up?`<div><span>⚡</span><p><b>${escapeHtml(best.name)}</b><small>tu ejercicio con más mejoras hoy</small></p></div>`:''}${warmupSetsCount(w)?`<div><span>W</span><p><b>${warmupSetsCount(w)} series de calentamiento</b><small>no incluidas en volumen ni PR</small></p></div>`:''}</div>
+  const headline=prs?'Has subido el listón.':cmp.up?'Mejor que la última vez.':'Sesión completada.';
+  const sub=prs?`${prs} nuevo${prs>1?'s':''} PR. Esto sí cuenta.`:cmp.up?`${cmp.up} series mejoradas respecto a tu referencia.`:'Otro entrenamiento guardado. La consistencia suma.';
+  modal(`<div class="finish-summary finish-summary-v2"><div class="finish-celebration"><div class="finish-orbit"><span>✓</span></div><div class="eyebrow">SESIÓN TERMINADA</div><h2>${headline}</h2><p>${sub}</p></div>
+    <div class="summary-grid summary-grid-v2"><div><strong>${mins(Date.now()-w.startedAt)}</strong><span>minutos</span></div><div><strong>${workingSetsCount(w)}</strong><span>series</span></div><div><strong>${Math.round(volume(w)).toLocaleString('es-ES')}</strong><span>kg movidos</span></div><div><strong>${rir===null?'—':rir.toFixed(1)}</strong><span>RIR medio</span></div></div>
+    <div class="summary-highlights">${cmp.up?`<div><span>↑</span><p><b>${cmp.up} series mejoradas</b><small>frente a tu sesión anterior</small></p></div>`:''}${prs?`<div class="pr-highlight"><span>PR</span><p><b>${prs} récord${prs>1?'s':''} personal${prs>1?'es':''}</b><small>nuevo máximo de peso</small></p></div>`:''}${best?.up?`<div><span>⚡</span><p><b>${escapeHtml(best.name)}</b><small>el ejercicio donde más has progresado hoy</small></p></div>`:''}</div>
+    <button class="share-session-btn" id="share-session">Compartir resumen</button>
     <button class="finish-feedback-link" id="finish-feedback">¿Has visto algo raro? Enviar feedback</button>
     <div class="modal-actions"><button class="secondary" data-close>Seguir editando</button><button class="primary" id="confirm-finish">Guardar sesión</button></div></div>`);
   $('#confirm-finish').onclick=()=>commitWorkout();
   $('#finish-feedback').onclick=()=>openBetaFeedback('Entrenamiento / resumen final');
+  $('#share-session').onclick=()=>shareWorkoutResult({w,prs,cmp});
+}
+async function shareWorkoutResult({w,prs,cmp}){
+  const text=[`REP · ${w.name}`,`${mins(Date.now()-w.startedAt)} min · ${workingSetsCount(w)} series · ${Math.round(volume(w)).toLocaleString('es-ES')} kg`,cmp.up?`↑ ${cmp.up} series mejoradas`:'',prs?`🏆 ${prs} PR${prs>1?'s':''}`:''].filter(Boolean).join('\n');
+  try{if(navigator.share)await navigator.share({title:'Mi entrenamiento en REP',text});else{await navigator.clipboard.writeText(text);toast('Resumen copiado');}}catch(e){if(e?.name!=='AbortError')toast('No se pudo compartir');}
 }
 function commitWorkout(){
   const w=state.active; if(!w)return;
