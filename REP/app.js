@@ -268,6 +268,31 @@ function sparkline(points){
   return `<svg class="progress-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolución del ejercicio"><polyline points="${coords.map(p=>`${p.x},${p.y}`).join(' ')}" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${coords.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="4"/>`).join('')}</svg>`;
 }
 
+
+function icon(name,size=20){
+  const paths={
+    home:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V21h13V9.5"/><path d="M9 21v-7h6v7"/>',
+    routines:'<path d="M6 3v18M18 3v18M3 8h6M15 8h6M3 16h6M15 16h6"/>',
+    progress:'<path d="M4 19V9"/><path d="M10 19V5"/><path d="M16 19v-7"/><path d="m3 7 6-4 6 6 6-5"/>',
+    settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.05.05-2.78 2.78-.05-.05A1.8 1.8 0 0 0 15 19.4a1.8 1.8 0 0 0-1.1 1.65V21h-3.8v-.05A1.8 1.8 0 0 0 9 19.4a1.8 1.8 0 0 0-1.98.36l-.05.05-2.78-2.78.05-.05A1.8 1.8 0 0 0 4.6 15a1.8 1.8 0 0 0-1.65-1.1H3v-3.8h.05A1.8 1.8 0 0 0 4.6 9a1.8 1.8 0 0 0-.36-1.98l-.05-.05 2.78-2.78.05.05A1.8 1.8 0 0 0 9 4.6a1.8 1.8 0 0 0 1.1-1.65V3h3.8v.05A1.8 1.8 0 0 0 15 4.6a1.8 1.8 0 0 0 1.98-.36l.05-.05 2.78 2.78-.05.05A1.8 1.8 0 0 0 19.4 9a1.8 1.8 0 0 0 1.65 1.1H21v3.8h-.05A1.8 1.8 0 0 0 19.4 15Z"/>',
+    play:'<path d="m9 7 8 5-8 5V7Z"/>',
+    chevron:'<path d="m9 6 6 6-6 6"/>',
+    plus:'<path d="M12 5v14M5 12h14"/>',
+    flame:'<path d="M12 22c4 0 7-3 7-7 0-5-4-7-3-12-4 2-7 6-7 10-1-1-2-3-2-5-2 2-3 4-3 7 0 4 4 7 8 7Z"/><path d="M10 18c0-2 2-3 2-5 2 1 3 3 3 5a2.5 2.5 0 0 1-5 0Z"/>',
+    target:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M18 6l3-3M18 3h3v3"/>',
+    clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    more:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>'
+  };
+  return `<svg class="ui-icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]||''}</svg>`;
+}
+function routineVisual(r){
+  const n=r.name.toLowerCase();
+  if(n.includes('pierna'))return {glyph:'L',className:'legs'};
+  if(n.includes('pecho')||n.includes('tríceps')||n.includes('triceps'))return {glyph:'P',className:'push'};
+  if(n.includes('espalda')||n.includes('bíceps')||n.includes('biceps'))return {glyph:'B',className:'pull'};
+  return {glyph:r.name.trim().slice(0,1).toUpperCase()||'R',className:'default'};
+}
+
 function render(){
   clearInterval(elapsedInterval); elapsedInterval=null;
   const app=$('#app');
@@ -277,38 +302,48 @@ function render(){
 }
 function topbar(){
   const cloud=window.REPCloud;
-  const label=cloud?.isSignedIn?.()?'sincronizado':cloud?.isConfigured?.()?'cuenta opcional':'local · privado';
-  return `<div class="topbar"><div class="brand">RE<span>P</span><small>1.0</small></div><span class="pill">${label}</span></div>`;
+  const online=cloud?.isSignedIn?.();
+  const label=online?'Cloud activo':cloud?.isConfigured?.()?'Cloud disponible':'Solo en este dispositivo';
+  return `<header class="topbar">
+    <div class="brand-lockup"><div class="brand-mark">R</div><div><div class="brand-word">REP</div><div class="brand-caption">TRAINING LOG</div></div></div>
+    <div class="sync-chip ${online?'online':''}"><span></span>${label}</div>
+  </header>`;
 }
 function nav(){
-  const items=[['home','⌂','Inicio'],['routines','▦','Rutinas'],['progress','↗','Progreso'],['settings','⚙','Ajustes']];
-  return `<nav class="nav">${items.map(([id,ic,t])=>`<button data-view="${id}" class="${view===id?'active':''}"><span class="nicon">${ic}</span>${t}</button>`).join('')}</nav>`;
+  const items=[['home','home','Inicio'],['routines','routines','Rutinas'],['progress','progress','Progreso'],['settings','settings','Ajustes']];
+  return `<nav class="nav-shell"><div class="nav">${items.map(([id,ic,t])=>`<button data-view="${id}" class="${view===id?'active':''}">${icon(ic,21)}<span>${t}</span></button>`).join('')}</div></nav>`;
 }
-
 function homeView(){
   const wk=workoutsThisWeek().length, goal=state.settings.weeklyGoal;
-  const days=['L','M','X','J','V','S','D']; const today=isoDay();
-  const last=state.workouts.at(-1);
+  const days=['L','M','X','J','V','S','D'], today=isoDay(), streak=activeWeekStreak();
+  const last=state.workouts.at(-1), featured=state.routines[0], pct=Math.min(100,Math.round(wk/goal*100));
   return `
-    <div class="eyebrow">Tu entrenamiento</div>
-    <h1 class="hero-title">Entrena. Apunta.<br>Progresa.</h1>
-    <p class="subtle">Lo justo para registrar el gym sin convertir cada serie en una tarea.</p>
-    <div class="grid-2">
-      <div class="stat"><strong>🔥 ${activeWeekStreak()}</strong><small>semanas activo</small></div>
-      <div class="stat"><strong>${wk}/${goal}</strong><small>objetivo semanal</small></div>
-    </div>
-    <div class="card">
-      <div class="card-row"><div><div class="eyebrow">Esta semana</div><h3 class="mb0">${wk>=goal?'Objetivo cumplido':'Sigue sumando'}</h3></div><span class="pill ${wk>=goal?'accent':''}">${Math.min(100,Math.round(wk/goal*100))}%</span></div>
-      <div class="progress-line"><span style="width:${Math.min(100,wk/goal*100)}%"></span></div>
-      <div class="week mt12">${weekDays().map((d,i)=>`<div class="day ${hasWorkoutOn(d)?'done':''} ${isoDay(d)===today?'today':''}"><b>${days[i]}</b><div class="dot">${hasWorkoutOn(d)?'✓':'·'}</div></div>`).join('')}</div>
-    </div>
+    <section class="home-hero">
+      <div class="hero-kicker">TU SEMANA · ${wk}/${goal}</div>
+      <h1>Haz que cada<br><span>serie cuente.</span></h1>
+      <p>Entra, supera tu última sesión y sal. REP se encarga del resto.</p>
+      ${featured?`<button class="hero-cta" data-start="${featured.id}"><span class="hero-play">${icon('play',19)}</span><span><b>Empezar ahora</b><small>${escapeHtml(featured.name)} · ${featured.exercises.length} ejercicios</small></span><span class="hero-arrow">${icon('chevron',18)}</span></button>`:''}
+      <div class="hero-metrics">
+        <div><span class="metric-icon">${icon('flame',18)}</span><b>${streak}</b><small>semanas activo</small></div>
+        <div><span class="metric-icon">${icon('target',18)}</span><b>${pct}%</b><small>objetivo semanal</small></div>
+      </div>
+    </section>
+
+    <section class="week-card">
+      <div class="week-card-head"><div><span>ESTA SEMANA</span><strong>${wk>=goal?'Objetivo completado':'Sigue construyendo'}</strong></div><b>${wk}/${goal}</b></div>
+      <div class="week-v2">${weekDays().map((d,i)=>`<div class="${hasWorkoutOn(d)?'done':''} ${isoDay(d)===today?'today':''}"><span>${days[i]}</span><b>${hasWorkoutOn(d)?'✓':new Date(d).getDate()}</b></div>`).join('')}</div>
+      <div class="progress-line"><span style="width:${pct}%"></span></div>
+    </section>
+
     ${todayGoalsHtml()}
-    <div class="section-title"><h2>Empezar entrenamiento</h2><button class="link-btn" data-view="routines">Ver rutinas</button></div>
-    ${state.routines.slice(0,2).map(r=>routineCard(r)).join('')}
-    ${last?`<div class="section-title"><h2>Última sesión</h2></div><div class="card history-item"><div class="datebox"><strong>${new Date(last.finishedAt).getDate()}</strong>${new Intl.DateTimeFormat('es-ES',{month:'short'}).format(new Date(last.finishedAt))}</div><div><h3>${last.name}</h3><div class="meta">${completedSets(last)} series · ${mins(last.finishedAt-last.startedAt)} min · ${Math.round(volume(last))} kg</div></div><span>›</span></div>`:''}
+
+    <div class="section-title premium-title"><div><span>RUTINAS</span><h2>Listo para entrenar</h2></div><button class="link-btn" data-view="routines">Ver todas ${icon('chevron',14)}</button></div>
+    <div class="routine-stack">${state.routines.slice(0,3).map(r=>routineCard(r)).join('')}</div>
+
+    ${last?`<div class="section-title premium-title"><div><span>ÚLTIMA ACTIVIDAD</span><h2>Tu sesión anterior</h2></div></div>
+      <button class="last-session-card" data-view="progress"><div class="last-session-date"><b>${new Date(last.finishedAt).getDate()}</b><span>${new Intl.DateTimeFormat('es-ES',{month:'short'}).format(new Date(last.finishedAt))}</span></div><div class="last-session-main"><b>${escapeHtml(last.name)}</b><span>${workingSetsCount(last)} series · ${mins(last.finishedAt-last.startedAt)} min · ${Math.round(volume(last)).toLocaleString('es-ES')} kg</span></div><div class="last-session-arrow">${icon('chevron',18)}</div></button>`:''}
   `;
 }
-
 function todayGoalsHtml(){
   const candidates=[];
   state.routines.flatMap(r=>r.exercises).forEach(name=>{
@@ -316,16 +351,21 @@ function todayGoalsHtml(){
     const t=progressionTarget(name); if(t)candidates.push({name,target:t.text});
   });
   if(!candidates.length)return '';
-  return `<div class="section-title"><h2>Hoy toca superar</h2></div><div class="card goals-card">${candidates.slice(0,3).map((g,i)=>`<div><span>${i+1}</span><p><b>${escapeHtml(g.name)}</b><small>${escapeHtml(g.target)}</small></p></div>`).join('')}</div>`;
+  return `<div class="section-title premium-title"><div><span>OBJETIVOS</span><h2>Hoy toca superar</h2></div></div>
+    <div class="goals-grid">${candidates.slice(0,3).map((g,i)=>`<div class="goal-tile"><div class="goal-num">0${i+1}</div><div><b>${escapeHtml(g.name)}</b><span>${escapeHtml(g.target)}</span></div></div>`).join('')}</div>`;
 }
 function routineCard(r,manage=false){
-  return `<div class="card routine-card"><div class="routine-icon">${r.name.toLowerCase().includes('pierna')?'🦵':'⚡'}</div><div class="routine-main"><h3>${escapeHtml(r.name)}</h3><div class="routine-meta">${r.exercises.length} ejercicios · ${r.exercises.slice(0,2).map(escapeHtml).join(', ')}${r.exercises.length>2?'…':''}</div></div><div class="routine-actions">${manage?`<button class="routine-more" data-routine-menu="${r.id}" aria-label="Opciones">•••</button>`:''}<button class="start-small" data-start="${r.id}">Empezar</button></div></div>`;
+  const v=routineVisual(r);
+  return `<article class="routine-card-v2 ${v.className}">
+    <div class="routine-glyph">${v.glyph}</div>
+    <div class="routine-copy"><span>${r.exercises.length} EJERCICIOS</span><h3>${escapeHtml(r.name)}</h3><p>${r.exercises.slice(0,3).map(escapeHtml).join(' · ')}${r.exercises.length>3?'…':''}</p></div>
+    <div class="routine-actions-v2">${manage?`<button class="routine-more" data-routine-menu="${r.id}" aria-label="Opciones">${icon('more',18)}</button>`:''}<button class="routine-start" data-start="${r.id}" aria-label="Empezar">${icon('play',18)}</button></div>
+  </article>`;
 }
 function routinesView(){return `
-  <div class="card-row"><div><div class="eyebrow">Rutinas</div><h1 class="hero-title">Tus sesiones</h1></div><button class="icon-btn" id="new-routine">＋</button></div>
-  <p class="subtle">Crea, edita o duplica tus rutinas y adapta el orden real de tu entrenamiento sobre la marcha.</p>
-  ${state.routines.map(r=>routineCard(r,true)).join('')}
-  <button class="primary mt12" id="free-workout">+ Entrenamiento libre</button>`;
+  <header class="page-head"><div><span class="eyebrow">ENTRENAMIENTO</span><h1>Tus rutinas.</h1><p>Menos decisiones. Más series buenas.</p></div><button class="floating-add" id="new-routine">${icon('plus',22)}</button></header>
+  <div class="routine-stack routines-page">${state.routines.map(r=>routineCard(r,true)).join('')}</div>
+  <button class="free-workout-card" id="free-workout"><span class="free-icon">${icon('plus',22)}</span><span><b>Entrenamiento libre</b><small>Empieza desde cero y añade ejercicios sobre la marcha</small></span><span>${icon('chevron',18)}</span></button>`;
 }
 function filteredWorkouts(){
   let arr=[...state.workouts].reverse();
@@ -400,25 +440,38 @@ function defaultSets(name){
 }
 function workoutView(){
   const w=state.active, stats=sessionComparisonStats(w);
-  return `<main class="app-shell">
-    <div class="workout-head"><div class="workout-title"><button class="icon-btn" id="cancel-workout">×</button><h1>${escapeHtml(w.name)}</h1><span class="timer" id="elapsed">00:00</span><button class="finish-btn" id="finish-workout">Terminar</button></div>
-      ${stats.compared?`<div class="session-compare"><span>vs última sesión</span><b class="cmp-up">↑ ${stats.up}</b><b class="cmp-same">= ${stats.same}</b><b class="cmp-down">↓ ${stats.down}</b></div>`:''}
-    </div>
-    ${w.exercises.length?w.exercises.map((e,ei)=>exerciseBlock(e,ei)).join(''):`<div class="empty">Añade tu primer ejercicio.</div>`}
-    <button class="primary mt12" id="add-exercise">+ Añadir ejercicio</button>
+  return `<main class="app-shell workout-shell">
+    <header class="workout-head-v2">
+      <div class="workout-topline"><button class="workout-close" id="cancel-workout">×</button><div class="live-dot"><span></span> EN CURSO</div><button class="finish-btn" id="finish-workout">Terminar</button></div>
+      <div class="workout-name-row"><div><span>ENTRENAMIENTO</span><h1>${escapeHtml(w.name)}</h1></div><div class="workout-clock">${icon('clock',17)}<strong id="elapsed">00:00</strong></div></div>
+      ${stats.compared?`<div class="session-compare-v2"><span>VS ÚLTIMA SESIÓN</span><div><b class="cmp-up">↑ ${stats.up}</b><b class="cmp-same">= ${stats.same}</b><b class="cmp-down">↓ ${stats.down}</b></div></div>`:''}
+    </header>
+    <div class="exercise-list">${w.exercises.length?w.exercises.map((e,ei)=>exerciseBlock(e,ei)).join(''):`<div class="empty-state"><div>${icon('routines',28)}</div><b>Entrenamiento vacío</b><span>Añade un ejercicio para empezar.</span></div>`}</div>
+    <button class="add-exercise-cta" id="add-exercise">${icon('plus',20)} Añadir ejercicio</button>
   </main>${restUntil?restBar():''}`;
 }
 function exerciseBlock(e,ei){
   const complete=exerciseDone(e), target=progressionTarget(e.name), pref=exercisePref(e.name);
-  return `<section class="exercise ${complete?'exercise-complete':''}"><div class="exercise-head"><div class="card-row"><div><div class="exercise-title-row"><h3>${escapeHtml(e.name)}</h3>${complete?'<span class="done-badge">Completado</span>':''}${isCurrentPR(e)?'<span class="pr-badge">PR</span>':''}</div><div class="last">${escapeHtml(groupForExercise(e.name))} · ${pref.repMin}–${pref.repMax} reps · Última vez: ${escapeHtml(bestSetText(e.name))}</div></div><div class="exercise-tools"><button class="mini-icon" data-ex-settings="${ei}" title="Objetivo y nota">⚙</button><button class="mini-icon" data-replace-ex="${ei}" title="Sustituir ejercicio">⇄</button><button class="mini-icon" data-move-up="${ei}" ${ei===0?'disabled':''}>↑</button><button class="mini-icon" data-move-down="${ei}" ${ei===state.active.exercises.length-1?'disabled':''}>↓</button><button class="mini-icon danger-icon" data-remove-ex="${ei}">×</button></div></div>
-    ${pref.note?`<div class="machine-note">📝 ${escapeHtml(pref.note)}</div>`:''}
-    ${target?`<div class="progression-target"><span>🎯 Próximo paso</span><strong>${escapeHtml(target.text)}</strong><small>${escapeHtml(target.note)}</small></div>`:''}</div>
-    <div class="set-head-v5"><span>Serie</span><span>kg</span><span>reps</span><span>✓</span></div>
-    <div class="sets-v5">${e.sets.map((raw,si)=>{const s=normalizeSet(raw);return `<div class="set-card ${s.done?'set-done':''} ${s.type==='warmup'?'warmup-set':''}">
-      <div class="set-main-v5"><div class="set-index-v5"><b>${si+1}</b><span data-set-trend="${ei}:${si}">${trendMarkup(e.name,si,s)}</span></div><input class="set-input" inputmode="decimal" type="number" step="0.5" placeholder="kg" value="${s.weight}" data-weight="${ei}:${si}"><input class="set-input" inputmode="numeric" type="number" step="1" placeholder="reps" value="${s.reps}" data-reps="${ei}:${si}"><button class="check ${s.done?'done':''}" data-done="${ei}:${si}">${s.done?'✓':'○'}</button></div>
-      <div class="set-meta-v5"><button class="set-type type-${s.type}" data-type="${ei}:${si}"><b>${setTypeShort(s.type)}</b> ${setTypeLabel(s.type)}</button><button class="rir-chip ${s.rir!==null?'has-rir':''}" data-rir="${ei}:${si}">RIR ${s.rir===null?'—':s.rir}</button><button class="set-delete-v5" data-delset="${ei}:${si}">Eliminar</button></div>
-    </div>`}).join('')}</div>
-    <div class="exercise-actions"><button class="secondary" data-addset="${ei}">+ Serie</button><button class="secondary" data-prefill="${ei}">Copiar anterior</button></div>
+  const doneCount=e.sets.filter(s=>s.done).length;
+  return `<section class="exercise-v2 ${complete?'exercise-complete':''}">
+    <div class="exercise-top">
+      <div class="exercise-number">0${ei+1}</div>
+      <div class="exercise-name-block"><span>${escapeHtml(groupForExercise(e.name))} · ${pref.repMin}–${pref.repMax} REPS</span><h3>${escapeHtml(e.name)}</h3><small>${doneCount}/${e.sets.length} series completadas</small></div>
+      <div class="exercise-tools compact"><button data-ex-settings="${ei}" title="Ajustes">⚙</button><button data-replace-ex="${ei}" title="Sustituir">⇄</button><button class="danger-icon" data-remove-ex="${ei}" title="Quitar">×</button></div>
+    </div>
+    ${pref.note?`<div class="machine-note-v2"><span>NOTA</span>${escapeHtml(pref.note)}</div>`:''}
+    ${target?`<div class="target-card"><div class="target-icon">${icon('target',18)}</div><div><span>OBJETIVO DE HOY</span><b>${escapeHtml(target.text)}</b><small>${escapeHtml(target.note)}</small></div></div>`:''}
+    <div class="set-table">
+      <div class="set-head-v2"><span>SERIE</span><span>PESO</span><span>REPS</span><span></span></div>
+      ${e.sets.map((raw,si)=>{const s=normalizeSet(raw);return `<div class="set-line ${s.done?'done':''} ${s.type==='warmup'?'warmup':''}">
+        <div class="set-id"><b>${si+1}</b><span data-set-trend="${ei}:${si}">${trendMarkup(e.name,si,s)}</span></div>
+        <div class="metric-input"><input inputmode="decimal" type="number" step="0.5" placeholder="0" value="${s.weight}" data-weight="${ei}:${si}"><span>kg</span></div>
+        <div class="metric-input"><input inputmode="numeric" type="number" step="1" placeholder="0" value="${s.reps}" data-reps="${ei}:${si}"><span>rep</span></div>
+        <button class="set-check-v2 ${s.done?'done':''}" data-done="${ei}:${si}">${s.done?'✓':''}</button>
+        <div class="set-tags"><button class="set-type type-${s.type}" data-type="${ei}:${si}">${setTypeLabel(s.type)}</button><button class="rir-chip ${s.rir!==null?'has-rir':''}" data-rir="${ei}:${si}">RIR ${s.rir===null?'—':s.rir}</button><button class="delete-set-link" data-delset="${ei}:${si}">Eliminar</button></div>
+      </div>`}).join('')}
+    </div>
+    <div class="exercise-footer"><button data-addset="${ei}">${icon('plus',15)} Añadir serie</button><button data-prefill="${ei}">Repetir anterior</button><div class="reorder"><button data-move-up="${ei}" ${ei===0?'disabled':''}>↑</button><button data-move-down="${ei}" ${ei===state.active.exercises.length-1?'disabled':''}>↓</button></div></div>
   </section>`;
 }
 function restBar(){
