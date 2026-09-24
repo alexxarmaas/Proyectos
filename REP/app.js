@@ -2,6 +2,9 @@ const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
 
 const STORAGE_KEY = 'rep-gym-mvp-v1';
+const APP_VERSION = '1.1.0-beta.1';
+const APP_NAME = 'REP';
+let deferredInstallPrompt = null;
 const exerciseCatalog = [
   {group:'Pecho', icon:'◒', exercises:['Press banca con barra','Press banca con mancuernas','Press inclinado con barra','Press inclinado con mancuernas','Press de pecho en máquina','Press inclinado en máquina','Aperturas en máquina (pec deck)','Aperturas en polea','Flexiones','Fondos para pecho']},
   {group:'Espalda', icon:'▤', exercises:['Jalón al pecho','Jalón al pecho agarre neutro','Dominadas','Dominadas asistidas','Remo sentado en polea','Remo en máquina','Remo con mancuerna','Remo con barra','Remo T-Bar','Pullover en polea','Hiperextensiones']},
@@ -18,7 +21,7 @@ const exerciseCatalog = [
 const catalog = exerciseCatalog.flatMap(g=>g.exercises);
 
 const seed = {
-  settings:{weeklyGoal:4, restSeconds:90},
+  settings:{weeklyGoal:4, restSeconds:90, onboardingComplete:false},
   routines:[
     {id:'r-back', name:'Espalda + bíceps', exercises:['Jalón al pecho','Remo sentado en polea','Remo en máquina','Pullover en polea','Curl de bíceps en polea','Curl martillo','Elevaciones laterales en máquina']},
     {id:'r-push', name:'Pecho + tríceps', exercises:['Press de pecho en máquina','Press inclinado con mancuernas','Aperturas en máquina (pec deck)','Extensión de tríceps en polea con cuerda','Press de hombro en máquina']},
@@ -50,6 +53,7 @@ function migrateState(input){
   const parsed=input&&typeof input==='object'?structuredClone(input):{};
   const next={...structuredClone(seed),...parsed};
   next.settings={...seed.settings,...(parsed.settings||{})};
+  if(parsed.settings?.onboardingComplete===undefined && parsed.meta?.schemaVersion) next.settings.onboardingComplete=true;
   next.exercisePrefs={...(parsed.exercisePrefs||{})};
   next.meta={...seed.meta,...(parsed.meta||{})};
   next.routines=Array.isArray(parsed.routines)?parsed.routines:structuredClone(seed.routines);
@@ -305,7 +309,7 @@ function topbar(){
   const online=cloud?.isSignedIn?.();
   const label=online?'Cloud activo':cloud?.isConfigured?.()?'Cloud disponible':'Solo en este dispositivo';
   return `<header class="topbar">
-    <div class="brand-lockup"><div class="brand-mark">R</div><div><div class="brand-word">REP</div><div class="brand-caption">TRAINING LOG</div></div></div>
+    <div class="brand-lockup"><div class="brand-mark">R</div><div><div class="brand-row"><div class="brand-word">REP</div><span class="beta-badge">BETA</span></div><div class="brand-caption">TRAINING LOG</div></div></div>
     <div class="sync-chip ${online?'online':''}"><span></span>${label}</div>
   </header>`;
 }
@@ -424,8 +428,17 @@ function settingsView(){return `
     <button class="primary" id="save-settings">Guardar ajustes</button>
   </div>
   ${cloudSettingsHtml()}
+  <section class="beta-center">
+    <div class="beta-center-head"><div><span>REP PRIVATE BETA</span><h3>Ayúdanos a pulirla.</h3><p>Instálala, úsala en el gym y mándanos cualquier cosa rara que veas.</p></div><div class="beta-version">${APP_VERSION}</div></div>
+    <div class="beta-actions">
+      <button id="beta-install"><span class="beta-action-icon">↓</span><span><b>${isStandalone()?'REP instalada':'Instalar REP'}</b><small>${isStandalone()?'Abierta como app':'Añadir a la pantalla de inicio'}</small></span></button>
+      <button id="beta-share"><span class="beta-action-icon">↗</span><span><b>Compartir REP</b><small>Enviar el enlace a otro tester</small></span></button>
+      <button id="beta-feedback"><span class="beta-action-icon">!</span><span><b>Enviar feedback</b><small>Bug, idea o detalle visual</small></span></button>
+      <button id="beta-guide"><span class="beta-action-icon">?</span><span><b>Ver guía rápida</b><small>Cómo funciona en 30 segundos</small></span></button>
+    </div>
+  </section>
   <div class="card"><h3>Datos y seguridad</h3><p class="subtle">REP mantiene una copia local y otra de recuperación en el navegador. Puedes exportar un backup portable cuando quieras.</p><div class="data-actions"><button class="secondary" id="export">Exportar backup</button><button class="secondary" id="import">Importar backup</button><button class="secondary" id="diagnostics">Diagnóstico</button><button class="secondary danger" id="reset">Borrar todo</button></div><input id="import-file" type="file" accept="application/json,.json" hidden></div>
-  <div class="version-line">REP v1.0 · datos locales compatibles con v0.x</div>`;
+  <div class="version-line">REP ${APP_VERSION} · beta privada</div>`;
 }
 function startRoutine(id){
   const r=state.routines.find(x=>x.id===id);
@@ -496,6 +509,10 @@ function bindCommon(){
   $('#import')?.addEventListener('click',()=>$('#import-file')?.click());
   $('#import-file')?.addEventListener('change',e=>{const file=e.target.files?.[0];if(file)importData(file);});
   $('#diagnostics')?.addEventListener('click',openDiagnostics);
+  $('#beta-install')?.addEventListener('click',installRep);
+  $('#beta-share')?.addEventListener('click',shareRep);
+  $('#beta-feedback')?.addEventListener('click',openBetaFeedback);
+  $('#beta-guide')?.addEventListener('click',()=>openOnboarding(true));
   $('#cloud-login')?.addEventListener('click',()=>cloudAuth('login'));
   $('#cloud-signup')?.addEventListener('click',()=>cloudAuth('signup'));
   $('#cloud-sync')?.addEventListener('click',()=>syncCloud(true));
@@ -573,8 +590,10 @@ function finishWorkout(){
   modal(`<div class="finish-summary"><div class="finish-hero"><div class="finish-check">✓</div><div><div class="eyebrow">Entrenamiento listo</div><h2>${escapeHtml(w.name)}</h2></div></div>
     <div class="summary-grid"><div><strong>${mins(Date.now()-w.startedAt)}</strong><span>min</span></div><div><strong>${workingSetsCount(w)}</strong><span>series trabajo</span></div><div><strong>${Math.round(volume(w)).toLocaleString('es-ES')}</strong><span>kg volumen</span></div><div><strong>${rir===null?'—':rir.toFixed(1)}</strong><span>RIR medio</span></div></div>
     <div class="summary-highlights">${cmp.up?`<div><span>↑</span><p><b>${cmp.up} series mejoradas</b><small>frente a la sesión anterior</small></p></div>`:''}${prs?`<div><span>🏆</span><p><b>${prs} PR${prs>1?'s':''}</b><small>nuevo máximo de peso</small></p></div>`:''}${best?.up?`<div><span>⚡</span><p><b>${escapeHtml(best.name)}</b><small>tu ejercicio con más mejoras hoy</small></p></div>`:''}${warmupSetsCount(w)?`<div><span>W</span><p><b>${warmupSetsCount(w)} series de calentamiento</b><small>no incluidas en volumen ni PR</small></p></div>`:''}</div>
+    <button class="finish-feedback-link" id="finish-feedback">¿Has visto algo raro? Enviar feedback</button>
     <div class="modal-actions"><button class="secondary" data-close>Seguir editando</button><button class="primary" id="confirm-finish">Guardar sesión</button></div></div>`);
   $('#confirm-finish').onclick=()=>commitWorkout();
+  $('#finish-feedback').onclick=()=>openBetaFeedback('Entrenamiento / resumen final');
 }
 function commitWorkout(){
   const w=state.active; if(!w)return;
@@ -729,7 +748,7 @@ async function importData(file){
 async function openDiagnostics(){
   const shadow=await readShadow();
   const info={
-    version:'1.0',
+    version:APP_VERSION,
     schema:state.meta?.schemaVersion,
     workouts:state.workouts.length,
     routines:state.routines.length,
@@ -751,10 +770,84 @@ async function cloudAuth(mode){
   }catch(e){toast(e?.message||'No se pudo iniciar sesión');}
 }
 
+
+function isStandalone(){
+  return window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator.standalone===true;
+}
+function canonicalAppUrl(){
+  return location.origin + location.pathname;
+}
+async function shareRep(){
+  const data={title:'REP — Gym Tracker',text:'Estoy probando REP, un tracker de gimnasio centrado en progresar sin perder tiempo registrando.',url:canonicalAppUrl()};
+  try{
+    if(navigator.share){await navigator.share(data);return;}
+    await navigator.clipboard.writeText(data.url); toast('Enlace copiado');
+  }catch(e){if(e?.name!=='AbortError')toast('No se pudo compartir');}
+}
+async function installRep(){
+  if(isStandalone()){toast('REP ya está instalada');return;}
+  if(deferredInstallPrompt){
+    deferredInstallPrompt.prompt();
+    try{await deferredInstallPrompt.userChoice;}catch{}
+    deferredInstallPrompt=null; render(); return;
+  }
+  const isiOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  modal(`<div class="install-guide"><div class="onboarding-logo">R</div><div class="eyebrow">INSTALAR REP</div><h2>${isiOS?'Añádela a tu inicio':'Instálala como una app'}</h2><p>${isiOS?'En Safari pulsa Compartir y después “Añadir a pantalla de inicio”.':'Abre el menú del navegador y busca “Instalar aplicación” o “Añadir a pantalla de inicio”.'}</p><div class="install-steps"><div><b>1</b><span>${isiOS?'Pulsa Compartir':'Abre el menú del navegador'}</span></div><div><b>2</b><span>${isiOS?'Añadir a pantalla de inicio':'Instalar / Añadir a inicio'}</span></div><div><b>3</b><span>Abre REP desde su icono</span></div></div><button class="primary" data-close>Entendido</button></div>`);
+}
+function onboardingStepHtml(step){
+  if(step===1)return `<div class="onboarding"><div class="onboarding-logo">R</div><span class="onboarding-beta">PRIVATE BETA</span><h2>Tu entrenamiento,<br><em>sin ruido.</em></h2><p>REP guarda tus series, recuerda lo que hiciste y te dice qué intentar superar la próxima vez.</p><div class="onboarding-points"><div><b>01</b><span><strong>Entrena rápido</strong><small>peso, reps y check. Nada más si no quieres.</small></span></div><div><b>02</b><span><strong>Progresa</strong><small>objetivos, PRs y comparación con tu sesión anterior.</small></span></div><div><b>03</b><span><strong>No pierdas tu sesión</strong><small>si cierras la app, vuelves donde estabas.</small></span></div></div><button class="primary" id="onboarding-next">Configurar REP</button><button class="onboarding-skip" id="onboarding-skip">Usar valores recomendados</button></div>`;
+  return `<div class="onboarding"><div class="onboarding-step">2 / 2</div><span class="eyebrow">DOS AJUSTES Y LISTO</span><h2>Hazla tuya.</h2><p>Puedes cambiar esto después en Ajustes.</p><div class="onboarding-settings"><div><label>Entrenamientos por semana</label><div class="number-stepper"><button data-goal-delta="-1">−</button><strong id="onboard-goal">${state.settings.weeklyGoal}</strong><button data-goal-delta="1">+</button></div></div><div><label>Descanso entre series</label><div class="rest-options">${[60,90,120,180].map(v=>`<button data-onboard-rest="${v}" class="${state.settings.restSeconds===v?'active':''}">${v<120?`${v}s`:`${v/60} min`}</button>`).join('')}</div></div></div><div class="onboarding-ready"><span>✓</span><p><b>3 rutinas ya preparadas</b><small>Puedes editarlas, duplicarlas o empezar un entrenamiento libre.</small></p></div><button class="primary" id="onboarding-done">Entrar en REP</button></div>`;
+}
+function openOnboarding(force=false){
+  if(!force && state.settings.onboardingComplete)return;
+  closeModal();
+  modal(onboardingStepHtml(1));
+  const bindStep1=()=>{
+    $('#onboarding-next').onclick=()=>{closeModal();modal(onboardingStepHtml(2));bindStep2();};
+    $('#onboarding-skip').onclick=()=>finishOnboarding();
+  };
+  const bindStep2=()=>{
+    $$('[data-goal-delta]').forEach(b=>b.onclick=()=>{state.settings.weeklyGoal=clamp(state.settings.weeklyGoal+Number(b.dataset.goalDelta),1,7);$('#onboard-goal').textContent=state.settings.weeklyGoal;});
+    $$('[data-onboard-rest]').forEach(b=>b.onclick=()=>{state.settings.restSeconds=Number(b.dataset.onboardRest);$$('[data-onboard-rest]').forEach(x=>x.classList.toggle('active',x===b));});
+    $('#onboarding-done').onclick=finishOnboarding;
+  };
+  bindStep1();
+}
+function finishOnboarding(){
+  state.settings.onboardingComplete=true; save(); closeModal(); render(); toast('REP lista para entrenar');
+}
+function feedbackText(kind,message,context=''){
+  const mode=isStandalone()?'PWA instalada':'navegador';
+  return [
+    'REP PRIVATE BETA — Feedback',
+    `Versión: ${APP_VERSION}`,
+    `Tipo: ${kind}`,
+    context?`Contexto: ${context}`:'',
+    `Modo: ${mode}`,
+    `Sesiones guardadas: ${state.workouts.length}`,
+    '',
+    message.trim()
+  ].filter(Boolean).join('\n');
+}
+function openBetaFeedback(context=''){
+  modal(`<div class="feedback-modal"><span class="eyebrow">REP PRIVATE BETA</span><h2>Cuéntanos qué has visto.</h2><p class="subtle">No hace falta escribir un informe. Con una frase clara nos vale.</p><div class="form-group"><label>TIPO</label><select class="form-input" id="feedback-kind"><option>Bug</option><option>Idea</option><option>Diseño / UX</option><option>Dato incorrecto</option><option>Otro</option></select></div><div class="form-group"><label>¿QUÉ HA PASADO?</label><textarea class="form-input feedback-text" id="feedback-message" maxlength="1200" placeholder="Ej. Al marcar la tercera serie, el temporizador tapa el botón…"></textarea></div><div class="feedback-meta">Se añadirá automáticamente la versión y un diagnóstico básico, nunca tus pesos ni ejercicios.</div><div class="modal-actions"><button class="secondary" data-close>Cancelar</button><button class="primary" id="share-feedback">Compartir feedback</button></div></div>`);
+  $('#share-feedback').onclick=async()=>{
+    const msg=$('#feedback-message').value.trim();
+    if(!msg){toast('Escribe qué ha pasado');return;}
+    const text=feedbackText($('#feedback-kind').value,msg,context);
+    try{
+      if(navigator.share){await navigator.share({title:'Feedback REP Beta',text});closeModal();return;}
+      await navigator.clipboard.writeText(text);closeModal();toast('Feedback copiado. Pégalo en WhatsApp');
+    }catch(e){if(e?.name!=='AbortError')toast('No se pudo compartir');}
+  };
+}
+
 function clamp(n,a,b){return Math.min(b,Math.max(a,Number.isFinite(n)?n:a));}
 function escapeHtml(s=''){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
 function escapeAttr(s=''){return escapeHtml(s);}
 
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstallPrompt=e;if(view==='settings')render();});
+window.addEventListener('appinstalled',()=>{deferredInstallPrompt=null;toast('REP instalada');if(view==='settings')render();});
 window.addEventListener('beforeunload',()=>save(false));
 window.addEventListener('error',()=>{try{save(false)}catch{}});
 window.addEventListener('unhandledrejection',()=>{try{save(false)}catch{}});
@@ -772,9 +865,10 @@ async function registerServiceWorker(){
 }
 async function boot(){
   const hasPrimary=!!localStorage.getItem(STORAGE_KEY);
+  let restored=false;
   if(!hasPrimary){
     const shadow=await readShadow();
-    if(shadow){state=migrateState(shadow);save(false);}
+    if(shadow){state=migrateState(shadow);save(false);restored=true;}
   }
   render();
   await registerServiceWorker();
@@ -786,5 +880,8 @@ async function boot(){
       render();
     }
   }catch{cloudReady=false;}
+  if(!hasPrimary&&!restored&&!state.settings.onboardingComplete){
+    setTimeout(()=>openOnboarding(false),120);
+  }
 }
 boot();

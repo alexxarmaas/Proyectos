@@ -1,5 +1,5 @@
-const CACHE='rep-gym-v1-0-1';
-const ASSETS=['./','./index.html','./style.css?v=1.0.1','./cloud.js?v=1.0.1','./app.js?v=1.0.1','./manifest.webmanifest','./icon.svg'];
+const CACHE='rep-gym-v1-1-beta-1';
+const ASSETS=['./','./index.html','./style.css?v=1.1.0-beta.1','./cloud.js?v=1.1.0-beta.1','./app.js?v=1.1.0-beta.1','./manifest.webmanifest','./icon.svg'];
 
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
 self.addEventListener('activate',e=>e.waitUntil(Promise.all([

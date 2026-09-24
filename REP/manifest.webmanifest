@@ -1,13 +1,13 @@
 {
   "id": "./",
-  "name": "REP Gym Tracker",
+  "name": "REP — Gym Tracker Beta",
   "short_name": "REP",
   "start_url": "./?source=pwa",
   "scope": "./",
   "display": "standalone",
   "background_color": "#090a0c",
   "theme_color": "#090a0c",
-  "description": "Tracker de gimnasio para rutinas, progresión, PRs, RIR, historial y sincronización.",
+  "description": "Tracker de gimnasio rápido para registrar entrenamientos, progresar y superar tu sesión anterior.",
   "categories": [
     "fitness",
     "health",
@@ -20,5 +20,6 @@
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "orientation": "portrait-primary"
 }
