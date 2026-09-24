@@ -22,3 +22,7 @@ python -m http.server 8080
 Abrir `http://localhost:8080`.
 
 Para probarlo en el móvil, despliega la carpeta como sitio estático o sirve la carpeta en tu red local.
+
+## Release
+
+Current release candidate: **v0.5** — rep ranges, RIR, set types, guided progression, exercise notes and workout summary.
