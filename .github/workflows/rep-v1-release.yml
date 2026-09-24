@@ -1,0 +1,51 @@
+name: REP v1 release
+
+on:
+  push:
+    paths:
+      - "_rep_release/READY"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Assemble REP v1
+        shell: bash
+        run: |
+          set -euo pipefail
+          decode() {
+            local staged="$1"
+            local target="$2"
+            mkdir -p "$(dirname "$target")"
+            cat "_rep_release/${staged}.b64"/part* | base64 -d > "$target"
+          }
+          decode "index.html" "REP/index.html"
+          decode "app.js" "REP/app.js"
+          decode "style.css" "REP/style.css"
+          decode "config.js" "REP/config.js"
+          decode "sw.js" "REP/sw.js"
+          decode "manifest.webmanifest" "REP/manifest.webmanifest"
+          decode "icon.svg" "REP/icon.svg"
+          decode "README.md" "REP/README.md"
+          decode "supabase.sql" "REP/supabase/001_rep_user_state.sql"
+          node --check REP/app.js
+          grep -q "version: '1.0.0'" REP/config.js
+          grep -q "const VERSION='1.0.0'" REP/sw.js
+      - name: Commit release
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add REP
+          if git diff --cached --quiet; then
+            echo "No release changes"
+            exit 0
+          fi
+          git commit -m "feat(REP): release v1.0.0"
+          git push
