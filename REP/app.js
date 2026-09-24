@@ -26,6 +26,7 @@ const seed = {
   ],
   workouts:[],
   exercisePrefs:{},
+  meta:{schemaVersion:2,updatedAt:0,lastSyncedAt:0},
   active:null
 };
 
@@ -36,15 +37,92 @@ let restUntil = null;
 let toastTimer = null;
 let elapsedInterval = null;
 
+
+const SHADOW_DB='rep-gym-v1';
+const SHADOW_STORE='snapshots';
+let syncTimer=null;
+let cloudReady=false;
+let suppressCloud=false;
+let historyQuery='';
+let historyRange='all';
+
+function migrateState(input){
+  const parsed=input&&typeof input==='object'?structuredClone(input):{};
+  const next={...structuredClone(seed),...parsed};
+  next.settings={...seed.settings,...(parsed.settings||{})};
+  next.exercisePrefs={...(parsed.exercisePrefs||{})};
+  next.meta={...seed.meta,...(parsed.meta||{})};
+  next.routines=Array.isArray(parsed.routines)?parsed.routines:structuredClone(seed.routines);
+  next.workouts=Array.isArray(parsed.workouts)?parsed.workouts:[];
+  next.workouts=next.workouts.map(w=>({...w,exercises:Array.isArray(w.exercises)?w.exercises.map(e=>({...e,sets:Array.isArray(e.sets)?e.sets.map(normalizeSet):[]})):[]}));
+  if(next.active?.exercises) next.active={...next.active,exercises:next.active.exercises.map(e=>({...e,sets:(e.sets||[]).map(normalizeSet)}))};
+  next.meta.schemaVersion=2;
+  return next;
+}
 function load(){
   try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(!raw) return structuredClone(seed);
-    const parsed = JSON.parse(raw);
-    return {...structuredClone(seed), ...parsed, settings:{...seed.settings,...(parsed.settings||{})}, exercisePrefs:{...(parsed.exercisePrefs||{})}};
-  }catch{ return structuredClone(seed); }
+    const raw=localStorage.getItem(STORAGE_KEY);
+    return raw?migrateState(JSON.parse(raw)):structuredClone(seed);
+  }catch{return structuredClone(seed);}
 }
-function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function openShadowDb(){
+  return new Promise((resolve,reject)=>{
+    if(!('indexedDB' in window)){resolve(null);return;}
+    const r=indexedDB.open(SHADOW_DB,1);
+    r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(SHADOW_STORE))r.result.createObjectStore(SHADOW_STORE);};
+    r.onsuccess=()=>resolve(r.result); r.onerror=()=>reject(r.error);
+  });
+}
+async function persistShadow(){
+  try{
+    const db=await openShadowDb(); if(!db)return;
+    const tx=db.transaction(SHADOW_STORE,'readwrite');
+    tx.objectStore(SHADOW_STORE).put(structuredClone(state),'latest');
+  }catch{}
+}
+async function readShadow(){
+  try{
+    const db=await openShadowDb(); if(!db)return null;
+    return await new Promise((resolve)=>{
+      const tx=db.transaction(SHADOW_STORE,'readonly');
+      const r=tx.objectStore(SHADOW_STORE).get('latest');
+      r.onsuccess=()=>resolve(r.result||null); r.onerror=()=>resolve(null);
+    });
+  }catch{return null;}
+}
+function save(touch=true){
+  if(touch){
+    state.meta={...seed.meta,...(state.meta||{}),schemaVersion:2,updatedAt:Date.now()};
+  }
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{}
+  persistShadow();
+  if(cloudReady&&!suppressCloud) scheduleCloudSync();
+}
+function scheduleCloudSync(){
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(()=>syncCloud(false),1400);
+}
+async function syncCloud(showFeedback=true){
+  if(!window.REPCloud?.isSignedIn?.()) return;
+  try{
+    const result=await window.REPCloud.syncState(state);
+    if(result?.direction==='pull'&&result.state){
+      suppressCloud=true;
+      state=migrateState(result.state);
+      state.meta.lastSyncedAt=Date.now();
+      save(false);
+      suppressCloud=false;
+      render();
+      if(showFeedback)toast('Datos sincronizados desde la nube');
+      return;
+    }
+    state.meta.lastSyncedAt=Date.now(); save(false);
+    if(showFeedback)toast('Sincronización completada');
+  }catch(e){
+    if(showFeedback)toast('No se pudo sincronizar ahora');
+  }
+}
+
 function uid(p='id'){ return `${p}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`; }
 function isoDay(d=new Date()){ const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
 function prettyDate(ts){ return new Intl.DateTimeFormat('es-ES',{weekday:'short',day:'numeric',month:'short'}).format(new Date(ts)); }
@@ -85,7 +163,7 @@ function weekDays(){
 }
 function hasWorkoutOn(d){ const target=isoDay(d); return state.workouts.some(w=>isoDay(new Date(w.finishedAt))===target); }
 function lastExerciseSets(name){
-  const last=[...state.workouts].reverse().find(w=>w.exercises.some(e=>e.name===name));
+  const last=[...state.workouts].reverse().find(w=>w.exercises?.some(e=>e.name===name&&e.sets?.some(s=>s.done)));
   if(!last) return null;
   return last.exercises.find(e=>e.name===name).sets.filter(s=>s.done);
 }
@@ -197,7 +275,11 @@ function render(){
   app.innerHTML=`<main class="app-shell">${topbar()}${view==='home'?homeView():view==='routines'?routinesView():view==='progress'?progressView():settingsView()}</main>${nav()}`;
   bindCommon();
 }
-function topbar(){ return `<div class="topbar"><div class="brand">RE<span>P</span></div><span class="pill">local · privado</span></div>`; }
+function topbar(){
+  const cloud=window.REPCloud;
+  const label=cloud?.isSignedIn?.()?'sincronizado':cloud?.isConfigured?.()?'cuenta opcional':'local · privado';
+  return `<div class="topbar"><div class="brand">RE<span>P</span><small>1.0</small></div><span class="pill">${label}</span></div>`;
+}
 function nav(){
   const items=[['home','⌂','Inicio'],['routines','▦','Rutinas'],['progress','↗','Progreso'],['settings','⚙','Ajustes']];
   return `<nav class="nav">${items.map(([id,ic,t])=>`<button data-view="${id}" class="${view===id?'active':''}"><span class="nicon">${ic}</span>${t}</button>`).join('')}</nav>`;
@@ -220,10 +302,21 @@ function homeView(){
       <div class="progress-line"><span style="width:${Math.min(100,wk/goal*100)}%"></span></div>
       <div class="week mt12">${weekDays().map((d,i)=>`<div class="day ${hasWorkoutOn(d)?'done':''} ${isoDay(d)===today?'today':''}"><b>${days[i]}</b><div class="dot">${hasWorkoutOn(d)?'✓':'·'}</div></div>`).join('')}</div>
     </div>
+    ${todayGoalsHtml()}
     <div class="section-title"><h2>Empezar entrenamiento</h2><button class="link-btn" data-view="routines">Ver rutinas</button></div>
     ${state.routines.slice(0,2).map(r=>routineCard(r)).join('')}
     ${last?`<div class="section-title"><h2>Última sesión</h2></div><div class="card history-item"><div class="datebox"><strong>${new Date(last.finishedAt).getDate()}</strong>${new Intl.DateTimeFormat('es-ES',{month:'short'}).format(new Date(last.finishedAt))}</div><div><h3>${last.name}</h3><div class="meta">${completedSets(last)} series · ${mins(last.finishedAt-last.startedAt)} min · ${Math.round(volume(last))} kg</div></div><span>›</span></div>`:''}
   `;
+}
+
+function todayGoalsHtml(){
+  const candidates=[];
+  state.routines.flatMap(r=>r.exercises).forEach(name=>{
+    if(candidates.some(x=>x.name===name))return;
+    const t=progressionTarget(name); if(t)candidates.push({name,target:t.text});
+  });
+  if(!candidates.length)return '';
+  return `<div class="section-title"><h2>Hoy toca superar</h2></div><div class="card goals-card">${candidates.slice(0,3).map((g,i)=>`<div><span>${i+1}</span><p><b>${escapeHtml(g.name)}</b><small>${escapeHtml(g.target)}</small></p></div>`).join('')}</div>`;
 }
 function routineCard(r,manage=false){
   return `<div class="card routine-card"><div class="routine-icon">${r.name.toLowerCase().includes('pierna')?'🦵':'⚡'}</div><div class="routine-main"><h3>${escapeHtml(r.name)}</h3><div class="routine-meta">${r.exercises.length} ejercicios · ${r.exercises.slice(0,2).map(escapeHtml).join(', ')}${r.exercises.length>2?'…':''}</div></div><div class="routine-actions">${manage?`<button class="routine-more" data-routine-menu="${r.id}" aria-label="Opciones">•••</button>`:''}<button class="start-small" data-start="${r.id}">Empezar</button></div></div>`;
@@ -234,33 +327,54 @@ function routinesView(){return `
   ${state.routines.map(r=>routineCard(r,true)).join('')}
   <button class="primary mt12" id="free-workout">+ Entrenamiento libre</button>`;
 }
+function filteredWorkouts(){
+  let arr=[...state.workouts].reverse();
+  if(historyRange!=='all'){
+    const days=Number(historyRange), cutoff=Date.now()-days*86400000;
+    arr=arr.filter(w=>w.finishedAt>=cutoff);
+  }
+  const q=historyQuery.trim().toLowerCase();
+  if(q)arr=arr.filter(w=>w.name?.toLowerCase().includes(q)||w.exercises?.some(e=>e.name?.toLowerCase().includes(q)));
+  return arr;
+}
 function progressView(){
   const exercises=allLoggedExercises();
   let selected=state.settings.progressExercise;
-  if(!selected || !exercises.includes(selected)) selected=exercises[0]||'';
+  if(!selected||!exercises.includes(selected))selected=exercises[0]||'';
   const series=selected?progressSeries(selected):{weighted:true,points:[]};
   const latest=series.points.at(-1),prev=series.points.at(-2);
   const diff=latest&&prev?latest.value-prev.value:null;
   const unit=series.weighted?'kg':'reps';
-  const recent=[...state.workouts].reverse().slice(0,6);
+  const recent=filteredWorkouts();
   const days30=Date.now()-30*86400000;
   const last30=state.workouts.filter(w=>w.finishedAt>=days30);
   const totalVol=Math.round(last30.reduce((a,w)=>a+volume(w),0));
-  return `<div class="eyebrow">Progreso</div><h1 class="hero-title">Lo que estás moviendo</h1>
-    <p class="subtle">REP compara tus sesiones sin pedirte métricas extra.</p>
-    <div class="grid-2">
-      <div class="stat"><strong>${state.workouts.length}</strong><small>sesiones totales</small></div>
-      <div class="stat"><strong>${totalVol.toLocaleString('es-ES')}</strong><small>kg de volumen · 30 días</small></div>
+  const totalSets=last30.reduce((a,w)=>a+workingSetsCount(w),0);
+  return `<div class="eyebrow">Progreso</div><h1 class="hero-title">Tu evolución</h1>
+    <p class="subtle">Carga, sesiones y rendimiento sin convertir el entrenamiento en una hoja de cálculo.</p>
+    <div class="stats-3">
+      <div class="stat"><strong>${state.workouts.length}</strong><small>sesiones</small></div>
+      <div class="stat"><strong>${totalVol.toLocaleString('es-ES')}</strong><small>kg · 30 días</small></div>
+      <div class="stat"><strong>${totalSets}</strong><small>series · 30 días</small></div>
     </div>
     ${exercises.length?`<div class="card progress-card">
       <div class="form-group progress-select-wrap"><label>EJERCICIO</label><select class="form-input" id="progress-exercise">${exercises.map(x=>`<option value="${escapeAttr(x)}" ${x===selected?'selected':''}>${escapeHtml(x)}</option>`).join('')}</select></div>
       <div class="progress-head"><div><div class="eyebrow">${series.weighted?'Mejor peso':'Mejores repeticiones'}</div><strong>${latest?latest.value:'—'} ${latest?unit:''}</strong></div>${diff!==null?`<span class="trend ${diff>0?'up':diff<0?'down':'flat'}">${diff>0?'+':''}${diff} ${unit}</span>`:''}</div>
-      ${sparkline(series.points.slice(-10))}
-      <div class="chart-axis"><span>${series.points.length?prettyDate(series.points[Math.max(0,series.points.length-10)].date):''}</span><span>${latest?prettyDate(latest.date):''}</span></div>
-      <div class="progress-history">${exerciseHistory(selected).slice(-4).reverse().map(h=>`<div><span>${prettyDate(h.date)}</span><strong>${h.weighted?`${h.maxWeight} kg × ${h.maxReps}`:`${h.maxReps} reps`}</strong></div>`).join('')}</div>
-    </div>`:`<div class="empty">Cuando termines tu primer entrenamiento, aquí aparecerá la evolución de cada ejercicio.</div>`}
-    <div class="section-title"><h2>Sesiones recientes</h2></div>
-    ${recent.length?recent.map(w=>`<button class="card history-item history-button" data-workout-detail="${w.id}"><div class="datebox"><strong>${new Date(w.finishedAt).getDate()}</strong>${new Intl.DateTimeFormat('es-ES',{month:'short'}).format(new Date(w.finishedAt))}</div><div><h3>${escapeHtml(w.name)}</h3><div class="meta">${completedSets(w)} series · ${mins(w.finishedAt-w.startedAt)} min · ${Math.round(volume(w)).toLocaleString('es-ES')} kg</div></div><span>›</span></button>`).join(''):'<div class="empty">Todavía no hay sesiones guardadas.</div>'}`;
+      ${sparkline(series.points.slice(-12))}
+      <div class="chart-axis"><span>${series.points.length?prettyDate(series.points[Math.max(0,series.points.length-12)].date):''}</span><span>${latest?prettyDate(latest.date):''}</span></div>
+      <div class="progress-history">${exerciseHistory(selected).slice(-5).reverse().map(h=>`<div><span>${prettyDate(h.date)}</span><strong>${h.weighted?`${h.maxWeight} kg × ${h.maxReps}`:`${h.maxReps} reps`}</strong></div>`).join('')}</div>
+    </div>`:`<div class="empty">Termina una sesión y aquí aparecerá tu evolución.</div>`}
+    <div class="section-title"><h2>Historial</h2><span class="subtle small">${recent.length} sesiones</span></div>
+    <div class="history-filters"><input class="form-input" id="history-search" placeholder="Buscar rutina o ejercicio…" value="${escapeAttr(historyQuery)}"><select class="form-input" id="history-range"><option value="all" ${historyRange==='all'?'selected':''}>Todo</option><option value="30" ${historyRange==='30'?'selected':''}>30 días</option><option value="90" ${historyRange==='90'?'selected':''}>90 días</option><option value="365" ${historyRange==='365'?'selected':''}>1 año</option></select></div>
+    ${recent.length?recent.map(w=>`<button class="card history-item history-button" data-workout-detail="${w.id}"><div class="datebox"><strong>${new Date(w.finishedAt).getDate()}</strong>${new Intl.DateTimeFormat('es-ES',{month:'short'}).format(new Date(w.finishedAt))}</div><div><h3>${escapeHtml(w.name)}</h3><div class="meta">${workingSetsCount(w)} trabajo · ${mins(w.finishedAt-w.startedAt)} min · ${Math.round(volume(w)).toLocaleString('es-ES')} kg</div></div><span>›</span></button>`).join(''):'<div class="empty">No hay sesiones que coincidan.</div>'}`;
+}
+
+function cloudSettingsHtml(){
+  const cloud=window.REPCloud;
+  if(!cloud?.isConfigured?.())return `<div class="card"><div class="card-row"><div><h3>Nube REP</h3><p class="subtle mb0">La app está preparada para cuenta y sincronización. Falta activar el proyecto cloud.</p></div><span class="pill">local</span></div></div>`;
+  if(!cloud.isSignedIn())return `<div class="card"><h3>Cuenta REP</h3><p class="subtle">Sincroniza rutinas, historial y ajustes entre dispositivos.</p><div class="form-group"><label>EMAIL</label><input class="form-input" id="cloud-email" type="email" autocomplete="email"></div><div class="form-group"><label>CONTRASEÑA</label><input class="form-input" id="cloud-password" type="password" autocomplete="current-password"></div><div class="data-actions"><button class="primary" id="cloud-login">Entrar</button><button class="secondary" id="cloud-signup">Crear cuenta</button></div></div>`;
+  const email=cloud.getSession()?.user?.email||'Cuenta conectada';
+  return `<div class="card"><div class="card-row"><div><h3>${escapeHtml(email)}</h3><p class="subtle mb0">Tus datos pueden sincronizarse automáticamente.</p></div><span class="pill accent">cloud</span></div><div class="data-actions mt12"><button class="primary" id="cloud-sync">Sincronizar ahora</button><button class="secondary" id="cloud-logout">Cerrar sesión</button></div></div>`;
 }
 function settingsView(){return `
   <div class="eyebrow">Ajustes</div><h1 class="hero-title">A tu manera</h1>
@@ -269,8 +383,10 @@ function settingsView(){return `
     <div class="form-group"><label>DESCANSO POR DEFECTO (SEGUNDOS)</label><input class="form-input" id="rest" type="number" min="15" max="600" step="15" value="${state.settings.restSeconds}"></div>
     <button class="primary" id="save-settings">Guardar ajustes</button>
   </div>
-  <div class="card"><h3>Datos</h3><p class="subtle">Todo se guarda en este dispositivo. Puedes exportarlo y restaurarlo en otro móvil.</p><div class="data-actions"><button class="secondary" id="export">Exportar backup</button><button class="secondary" id="import">Importar backup</button><button class="secondary danger" id="reset">Borrar todo</button></div><input id="import-file" type="file" accept="application/json,.json" hidden></div>`;}
-
+  ${cloudSettingsHtml()}
+  <div class="card"><h3>Datos y seguridad</h3><p class="subtle">REP mantiene una copia local y otra de recuperación en el navegador. Puedes exportar un backup portable cuando quieras.</p><div class="data-actions"><button class="secondary" id="export">Exportar backup</button><button class="secondary" id="import">Importar backup</button><button class="secondary" id="diagnostics">Diagnóstico</button><button class="secondary danger" id="reset">Borrar todo</button></div><input id="import-file" type="file" accept="application/json,.json" hidden></div>
+  <div class="version-line">REP v1.0 · datos locales compatibles con v0.x</div>`;
+}
 function startRoutine(id){
   const r=state.routines.find(x=>x.id===id);
   const ex = r ? r.exercises : [];
@@ -294,7 +410,7 @@ function workoutView(){
 }
 function exerciseBlock(e,ei){
   const complete=exerciseDone(e), target=progressionTarget(e.name), pref=exercisePref(e.name);
-  return `<section class="exercise ${complete?'exercise-complete':''}"><div class="exercise-head"><div class="card-row"><div><div class="exercise-title-row"><h3>${escapeHtml(e.name)}</h3>${complete?'<span class="done-badge">Completado</span>':''}${isCurrentPR(e)?'<span class="pr-badge">PR</span>':''}</div><div class="last">${escapeHtml(groupForExercise(e.name))} · ${pref.repMin}–${pref.repMax} reps · Última vez: ${escapeHtml(bestSetText(e.name))}</div></div><div class="exercise-tools"><button class="mini-icon" data-ex-settings="${ei}" title="Objetivo y nota">⚙</button><button class="mini-icon" data-move-up="${ei}" ${ei===0?'disabled':''}>↑</button><button class="mini-icon" data-move-down="${ei}" ${ei===state.active.exercises.length-1?'disabled':''}>↓</button><button class="mini-icon danger-icon" data-remove-ex="${ei}">×</button></div></div>
+  return `<section class="exercise ${complete?'exercise-complete':''}"><div class="exercise-head"><div class="card-row"><div><div class="exercise-title-row"><h3>${escapeHtml(e.name)}</h3>${complete?'<span class="done-badge">Completado</span>':''}${isCurrentPR(e)?'<span class="pr-badge">PR</span>':''}</div><div class="last">${escapeHtml(groupForExercise(e.name))} · ${pref.repMin}–${pref.repMax} reps · Última vez: ${escapeHtml(bestSetText(e.name))}</div></div><div class="exercise-tools"><button class="mini-icon" data-ex-settings="${ei}" title="Objetivo y nota">⚙</button><button class="mini-icon" data-replace-ex="${ei}" title="Sustituir ejercicio">⇄</button><button class="mini-icon" data-move-up="${ei}" ${ei===0?'disabled':''}>↑</button><button class="mini-icon" data-move-down="${ei}" ${ei===state.active.exercises.length-1?'disabled':''}>↓</button><button class="mini-icon danger-icon" data-remove-ex="${ei}">×</button></div></div>
     ${pref.note?`<div class="machine-note">📝 ${escapeHtml(pref.note)}</div>`:''}
     ${target?`<div class="progression-target"><span>🎯 Próximo paso</span><strong>${escapeHtml(target.text)}</strong><small>${escapeHtml(target.note)}</small></div>`:''}</div>
     <div class="set-head-v5"><span>Serie</span><span>kg</span><span>reps</span><span>✓</span></div>
@@ -318,13 +434,20 @@ function bindCommon(){
   $('#new-routine')?.addEventListener('click',()=>openRoutineModal());
   $$('[data-routine-menu]').forEach(b=>b.onclick=()=>openRoutineActions(b.dataset.routineMenu));
   $('#progress-exercise')?.addEventListener('change',e=>{state.settings.progressExercise=e.target.value;save();render();});
+  $('#history-search')?.addEventListener('input',e=>{historyQuery=e.target.value;render();});
+  $('#history-range')?.addEventListener('change',e=>{historyRange=e.target.value;render();});
   $$('[data-workout-detail]').forEach(b=>b.onclick=()=>openWorkoutDetail(b.dataset.workoutDetail));
   $('#free-workout')?.addEventListener('click',()=>startRoutine(null));
   $('#save-settings')?.addEventListener('click',()=>{state.settings.weeklyGoal=clamp(+$('#goal').value,1,7);state.settings.restSeconds=clamp(+$('#rest').value,15,600);save();toast('Ajustes guardados');render();});
   $('#export')?.addEventListener('click',exportData);
   $('#import')?.addEventListener('click',()=>$('#import-file')?.click());
   $('#import-file')?.addEventListener('change',e=>{const file=e.target.files?.[0];if(file)importData(file);});
-  $('#reset')?.addEventListener('click',()=>{if(confirm('¿Borrar entrenamientos, rutinas y ajustes de este dispositivo?')){localStorage.removeItem(STORAGE_KEY);state=structuredClone(seed);render();}});
+  $('#diagnostics')?.addEventListener('click',openDiagnostics);
+  $('#cloud-login')?.addEventListener('click',()=>cloudAuth('login'));
+  $('#cloud-signup')?.addEventListener('click',()=>cloudAuth('signup'));
+  $('#cloud-sync')?.addEventListener('click',()=>syncCloud(true));
+  $('#cloud-logout')?.addEventListener('click',async()=>{await window.REPCloud.signOut();render();toast('Sesión cerrada');});
+  $('#reset')?.addEventListener('click',()=>{if(confirm('¿Borrar entrenamientos, rutinas y ajustes de este dispositivo?')){localStorage.removeItem(STORAGE_KEY);state=structuredClone(seed);save();render();}});
 }
 function bindWorkout(){
   const started=state.active.startedAt;
@@ -340,6 +463,7 @@ function bindWorkout(){
   $$('[data-rir]').forEach(b=>b.onclick=()=>cycleRir(b.dataset.rir));
   $$('[data-prefill]').forEach(b=>b.onclick=()=>{const e=state.active.exercises[+b.dataset.prefill];const last=lastExerciseSets(e.name);if(last?.length)e.sets=last.map(s=>({weight:s.weight,reps:s.reps,done:false,type:s.type||'normal',rir:null}));else toast('Todavía no hay una sesión anterior');save();render();});
   $$('[data-ex-settings]').forEach(b=>b.onclick=()=>openExerciseSettings(+b.dataset.exSettings));
+  $$('[data-replace-ex]').forEach(b=>b.onclick=()=>openExerciseModal(+b.dataset.replaceEx));
   $$('[data-remove-ex]').forEach(b=>b.onclick=()=>removeExercise(+b.dataset.removeEx));
   $$('[data-move-up]').forEach(b=>b.onclick=()=>moveExercise(+b.dataset.moveUp,-1));
   $$('[data-move-down]').forEach(b=>b.onclick=()=>moveExercise(+b.dataset.moveDown,1));
@@ -453,21 +577,29 @@ function openExerciseSettings(ei){
   };
 }
 
-function openExerciseModal(){
+function recentExerciseNames(){
+  const names=[];
+  [...state.workouts].reverse().forEach(w=>w.exercises?.forEach(e=>{if(!names.includes(e.name))names.push(e.name);}));
+  return names.slice(0,8);
+}
+function openExerciseModal(replaceIndex=null){
   let activeGroup='Todos';
-  modal(`<div class="modal-sticky"><h2>Añadir ejercicio</h2><input class="form-input" id="exercise-search" placeholder="Buscar ejercicio…">${groupFilters(activeGroup)}</div><div id="catalog-list">${catalogHtml(activeGroup)}</div><div class="custom-add"><div class="eyebrow">¿No aparece?</div><p class="subtle mb0">Escribe el nombre arriba y añádelo igualmente.</p></div><div class="modal-actions"><button class="secondary" data-close>Cerrar</button><button class="primary" id="add-custom">Añadir escrito</button></div>`);
-  const bindChoices=()=>$$('[data-exchoice]').forEach(b=>b.onclick=()=>addExercise(b.dataset.exchoice));
-  const redraw=()=>{
-    $('#catalog-list').innerHTML=catalogHtml(activeGroup,$('#exercise-search').value);
-    bindChoices();
-    $$('.group-chip').forEach(b=>b.classList.toggle('selected',b.dataset.group===activeGroup));
-  };
-  bindChoices();
-  $('#exercise-search').oninput=redraw;
+  const title=replaceIndex===null?'Añadir ejercicio':'Sustituir ejercicio';
+  const recent=recentExerciseNames();
+  modal(`<div class="modal-sticky"><h2>${title}</h2><input class="form-input" id="exercise-search" placeholder="Buscar ejercicio…">${recent.length?`<div class="quick-recent"><small>RECIENTES</small><div>${recent.map(x=>`<button class="chip" data-exchoice="${escapeAttr(x)}">${escapeHtml(x)}</button>`).join('')}</div></div>`:''}${groupFilters(activeGroup)}</div><div id="catalog-list">${catalogHtml(activeGroup)}</div><div class="custom-add"><div class="eyebrow">¿No aparece?</div><p class="subtle mb0">Escribe el nombre y añádelo igualmente.</p></div><div class="modal-actions"><button class="secondary" data-close>Cerrar</button><button class="primary" id="add-custom">Usar escrito</button></div>`);
+  const choose=(name)=>replaceIndex===null?addExercise(name):replaceExercise(replaceIndex,name);
+  const bindChoices=()=>$$('[data-exchoice]').forEach(b=>b.onclick=()=>choose(b.dataset.exchoice));
+  const redraw=()=>{$('#catalog-list').innerHTML=catalogHtml(activeGroup,$('#exercise-search').value);bindChoices();$$('.group-chip').forEach(b=>b.classList.toggle('selected',b.dataset.group===activeGroup));};
+  bindChoices(); $('#exercise-search').oninput=redraw;
   $$('.group-chip').forEach(b=>b.onclick=()=>{activeGroup=b.dataset.group;redraw();});
-  $('#add-custom').onclick=()=>{const v=$('#exercise-search').value.trim();if(v)addExercise(v);};
+  $('#add-custom').onclick=()=>{const v=$('#exercise-search').value.trim();if(v)choose(v);};
 }
 function addExercise(name){state.active.exercises.push({id:uid('e'),name,sets:defaultSets(name)});save();closeModal();render();}
+function replaceExercise(index,name){
+  const current=state.active.exercises[index];
+  state.active.exercises[index]={id:current.id||uid('e'),name,sets:defaultSets(name)};
+  save();closeModal();render();toast('Ejercicio sustituido');
+}
 
 function openRoutineActions(id){
   const r=state.routines.find(x=>x.id===id); if(!r)return;
@@ -500,30 +632,106 @@ function openRoutineModal(editId=null){
     save();closeModal();render();toast(existing?'Rutina actualizada':'Rutina creada');
   };
 }
+function repeatWorkout(id){
+  const w=state.workouts.find(x=>x.id===id); if(!w)return;
+  state.active={id:uid('w'),name:w.name,startedAt:Date.now(),exercises:w.exercises.map(e=>({id:uid('e'),name:e.name,sets:e.sets.filter(isWorkingSet).map(s=>({weight:s.weight,reps:s.reps,done:false,type:s.type||'normal',rir:null}))}))};
+  closeModal();save();render();toast('Sesión preparada');
+}
+function editWorkout(id){
+  const w=state.workouts.find(x=>x.id===id); if(!w)return;
+  modal(`<div class="eyebrow">Editar sesión</div><h2>${escapeHtml(w.name)}</h2><div class="edit-workout-list">${w.exercises.map((e,ei)=>`<section><strong>${escapeHtml(e.name)}</strong>${e.sets.map((s,si)=>`<div class="edit-set"><span>${si+1}</span><input class="form-input" type="number" step=".5" value="${s.weight??''}" data-ew="${ei}:${si}"><input class="form-input" type="number" value="${s.reps??''}" data-er="${ei}:${si}"><label><input type="checkbox" data-ed="${ei}:${si}" ${s.done?'checked':''}> ✓</label></div>`).join('')}</section>`).join('')}</div><div class="modal-actions"><button class="secondary" data-close>Cancelar</button><button class="primary" id="save-workout-edit">Guardar cambios</button></div>`);
+  $('#save-workout-edit').onclick=()=>{
+    $$('[data-ew]').forEach(i=>{const [ei,si]=i.dataset.ew.split(':').map(Number);w.exercises[ei].sets[si].weight=i.value;});
+    $$('[data-er]').forEach(i=>{const [ei,si]=i.dataset.er.split(':').map(Number);w.exercises[ei].sets[si].reps=i.value;});
+    $$('[data-ed]').forEach(i=>{const [ei,si]=i.dataset.ed.split(':').map(Number);w.exercises[ei].sets[si].done=i.checked;});
+    save();closeModal();render();toast('Sesión actualizada');
+  };
+}
 function openWorkoutDetail(id){
   const w=state.workouts.find(x=>x.id===id); if(!w)return;
   modal(`<div class="workout-detail-head"><div><div class="eyebrow">${prettyDate(w.finishedAt)}</div><h2>${escapeHtml(w.name)}</h2></div><span class="pill">${mins(w.finishedAt-w.startedAt)} min</span></div>
-    <div class="detail-stats"><span><strong>${completedSets(w)}</strong>series</span><span><strong>${Math.round(volume(w)).toLocaleString('es-ES')}</strong>kg volumen</span></div>
+    <div class="detail-stats"><span><strong>${workingSetsCount(w)}</strong>series trabajo</span><span><strong>${Math.round(volume(w)).toLocaleString('es-ES')}</strong>kg volumen</span></div>
     <div class="detail-exercises">${w.exercises.filter(e=>e.sets.some(s=>s.done)).map(e=>`<div class="detail-exercise"><div><strong>${escapeHtml(e.name)}</strong><small>${escapeHtml(groupForExercise(e.name))}</small></div><span>${e.sets.filter(s=>s.done).map(s=>`${s.type==='warmup'?'W ':s.type==='top'?'T ':''}${s.weight||0}×${s.reps||0}${s.rir!==null&&s.rir!==undefined?` · RIR ${s.rir}`:''}`).join(' · ')}</span></div>`).join('')}</div>
-    <div class="modal-actions"><button class="secondary danger" id="delete-workout">Eliminar</button><button class="secondary" data-close>Cerrar</button></div>`);
+    <div class="detail-actions"><button class="secondary" id="repeat-workout">Repetir</button><button class="secondary" id="edit-workout">Editar</button><button class="secondary danger" id="delete-workout">Eliminar</button></div><div class="modal-actions"><button class="secondary" data-close>Cerrar</button></div>`);
+  $('#repeat-workout').onclick=()=>repeatWorkout(id);
+  $('#edit-workout').onclick=()=>editWorkout(id);
   $('#delete-workout').onclick=()=>{if(confirm('¿Eliminar esta sesión del historial?')){state.workouts=state.workouts.filter(x=>x.id!==id);save();closeModal();render();toast('Sesión eliminada');}};
 }
+
 function modal(html){const w=document.createElement('div');w.className='modal-wrap';w.id='modal-wrap';w.innerHTML=`<div class="modal">${html}</div>`;document.body.appendChild(w);w.onclick=e=>{if(e.target===w||e.target.matches('[data-close]'))closeModal();};}
 function closeModal(){ $('#modal-wrap')?.remove(); }
 function toast(msg){clearTimeout(toastTimer);$('.toast')?.remove();const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);toastTimer=setTimeout(()=>t.remove(),2200);}
-function exportData(){const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`rep-backup-${isoDay()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+function exportData(){
+  const payload={format:'rep-backup',version:1,exportedAt:new Date().toISOString(),payload:state};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download=`rep-backup-${isoDay()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
 async function importData(file){
   try{
-    const parsed=JSON.parse(await file.text());
-    if(!parsed || !Array.isArray(parsed.routines) || !Array.isArray(parsed.workouts)) throw new Error('Formato no válido');
-    state={...structuredClone(seed),...parsed,settings:{...seed.settings,...(parsed.settings||{})},exercisePrefs:{...(parsed.exercisePrefs||{})},active:null};
-    save();toast('Backup restaurado');render();
+    const raw=JSON.parse(await file.text()), parsed=raw?.format==='rep-backup'?raw.payload:raw;
+    if(!parsed||!Array.isArray(parsed.routines)||!Array.isArray(parsed.workouts))throw new Error('Formato no válido');
+    state=migrateState({...parsed,active:null});save();toast('Backup restaurado');render();
   }catch{toast('No se pudo importar ese backup');}
 }
+async function openDiagnostics(){
+  const shadow=await readShadow();
+  const info={
+    version:'1.0',
+    schema:state.meta?.schemaVersion,
+    workouts:state.workouts.length,
+    routines:state.routines.length,
+    activeWorkout:!!state.active,
+    localBytes:new Blob([JSON.stringify(state)]).size,
+    recoveryCopy:!!shadow,
+    cloudConfigured:!!window.REPCloud?.isConfigured?.(),
+    cloudSignedIn:!!window.REPCloud?.isSignedIn?.(),
+    lastSyncedAt:state.meta?.lastSyncedAt?new Date(state.meta.lastSyncedAt).toLocaleString('es-ES'):'—'
+  };
+  modal(`<div class="eyebrow">Diagnóstico</div><h2>Estado de REP</h2><div class="diagnostics">${Object.entries(info).map(([k,v])=>`<div><span>${escapeHtml(k)}</span><strong>${escapeHtml(String(v))}</strong></div>`).join('')}</div><div class="modal-actions"><button class="secondary" data-close>Cerrar</button></div>`);
+}
+async function cloudAuth(mode){
+  const email=$('#cloud-email')?.value.trim(), password=$('#cloud-password')?.value;
+  if(!email||!password){toast('Introduce email y contraseña');return;}
+  try{
+    if(mode==='signup')await window.REPCloud.signUp(email,password); else await window.REPCloud.signIn(email,password);
+    await syncCloud(false);render();toast(mode==='signup'?'Cuenta creada':'Sesión iniciada');
+  }catch(e){toast(e?.message||'No se pudo iniciar sesión');}
+}
+
 function clamp(n,a,b){return Math.min(b,Math.max(a,Number.isFinite(n)?n:a));}
 function escapeHtml(s=''){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
 function escapeAttr(s=''){return escapeHtml(s);}
 
-window.addEventListener('beforeunload',save);
-if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
-render();
+window.addEventListener('beforeunload',()=>save(false));
+window.addEventListener('error',()=>{try{save(false)}catch{}});
+window.addEventListener('unhandledrejection',()=>{try{save(false)}catch{}});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')save(false);});
+
+async function registerServiceWorker(){
+  if(!('serviceWorker' in navigator)||!location.protocol.startsWith('http'))return;
+  try{
+    const reg=await navigator.serviceWorker.register('sw.js');
+    reg.addEventListener('updatefound',()=>{
+      const worker=reg.installing;
+      worker?.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)toast('REP actualizado');});
+    });
+  }catch{}
+}
+async function boot(){
+  const hasPrimary=!!localStorage.getItem(STORAGE_KEY);
+  if(!hasPrimary){
+    const shadow=await readShadow();
+    if(shadow){state=migrateState(shadow);save(false);}
+  }
+  render();
+  await registerServiceWorker();
+  try{
+    if(window.REPCloud){
+      await window.REPCloud.init();
+      cloudReady=true;
+      if(window.REPCloud.isSignedIn())await syncCloud(false);
+      render();
+    }
+  }catch{cloudReady=false;}
+}
+boot();

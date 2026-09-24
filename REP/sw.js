@@ -1,43 +1,18 @@
-const CACHE='rep-gym-v5-1';
-const ASSETS=['./','./index.html','./style.css?v=0.5.1','./app.js?v=0.5.1','./manifest.webmanifest','./icon.svg'];
+const CACHE='rep-gym-v1-0-0';
+const ASSETS=['./','./index.html','./style.css?v=1.0.0','./cloud.js?v=1.0.0','./app.js?v=1.0.0','./manifest.webmanifest','./icon.svg'];
 
-self.addEventListener('install',e=>{
-  self.skipWaiting();
-  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));
-});
-
+self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
 self.addEventListener('activate',e=>e.waitUntil(Promise.all([
   caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))),
   self.clients.claim()
 ])));
-
 self.addEventListener('fetch',e=>{
-  if(e.request.method!=='GET') return;
-  const url=new URL(e.request.url);
-  if(url.origin!==self.location.origin) return;
-
-  const networkFirst=e.request.mode==='navigate' || ['script','style','worker'].includes(e.request.destination);
-
+  if(e.request.method!=='GET')return;
+  const url=new URL(e.request.url); if(url.origin!==self.location.origin)return;
+  const networkFirst=e.request.mode==='navigate'||['script','style','worker'].includes(e.request.destination);
   if(networkFirst){
-    e.respondWith(
-      fetch(e.request).then(res=>{
-        const copy=res.clone();
-        caches.open(CACHE).then(c=>c.put(e.request,copy));
-        return res;
-      }).catch(async()=>{
-        return (await caches.match(e.request)) ||
-          (e.request.mode==='navigate' ? await caches.match('./') : undefined) ||
-          Response.error();
-      })
-    );
+    e.respondWith(fetch(e.request).then(res=>{const copy=res.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));return res;}).catch(async()=>await caches.match(e.request)||(e.request.mode==='navigate'?await caches.match('./'):Response.error())));
     return;
   }
-
-  e.respondWith(
-    caches.match(e.request).then(cached=>cached||fetch(e.request).then(res=>{
-      const copy=res.clone();
-      caches.open(CACHE).then(c=>c.put(e.request,copy));
-      return res;
-    }))
-  );
+  e.respondWith(caches.match(e.request).then(cached=>cached||fetch(e.request).then(res=>{const copy=res.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));return res;})));
 });
